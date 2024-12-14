@@ -1,0 +1,30 @@
+[package]
+name = "rmkit"
+version = "0.0.1"
+edition = "2021"
+homepage = "https://github.com/haobogu/rmkit"
+repository = "https://github.com/haobogu/rmkit"
+resolver = "2"
+description = "rmkit is a toolkit set for RMK keyboard firmware"
+license = "Apache-2.0"
+
+[dependencies]
+clap = { version = "4.5.23", features = [
+    "derive",
+    "string",
+] }
+rmk-config = { version = "0.2.3", features = ["toml"] }
+toml = "0.8"
+serde = "1.0"
+reqwest = { version = "0.12", features = ["json", "gzip", "stream"] }
+tokio = { version = "1", features = ["full"] }
+zip = "2.2"
+futures = "0.3"
+futures-util = "0.3.31"
+walkdir = "2"
+inquire = "0.7.5"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
