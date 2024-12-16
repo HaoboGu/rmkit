@@ -14,6 +14,8 @@ use zip::ZipArchive;
 
 mod args;
 mod chip;
+#[allow(dead_code)]
+mod config;
 mod keyboard_toml;
 
 #[tokio::main]

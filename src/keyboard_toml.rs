@@ -1,7 +1,10 @@
-use rmk_config::toml_config::KeyboardTomlConfig;
-use std::{env, fs, path::{Path, PathBuf}, process};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+    process,
+};
 
-use crate::chip::get_board_chip_map;
+use crate::{chip::get_board_chip_map, config::KeyboardTomlConfig};
 
 /// All info needed to create a RMK project
 pub(crate) struct ProjectInfo {
