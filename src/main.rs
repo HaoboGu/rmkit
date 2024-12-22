@@ -32,7 +32,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             project_name,
             chip,
             split,
-        } => init_project(project_name, chip, split).await,
+            local_path,
+        } => init_project(project_name, chip, split, local_path).await,
     }
 }
 
@@ -132,6 +133,7 @@ async fn init_project(
     project_name: Option<String>,
     chip: Option<String>,
     split: Option<bool>,
+    local_path: Option<String>,
 ) -> Result<(), Box<dyn Error>> {
     let project_name = if project_name.is_none() {
         Text::new("Project Name:").prompt()?.replace(" ", "_")
@@ -168,7 +170,16 @@ async fn init_project(
     };
 
     // Download template
-    download_project_template(&project_info).await?;
+    match local_path {
+        Some(p) => {
+            // Copy local template to project_info.target_dir
+            copy_dir_recursive(Path::new(&p), &project_info.target_dir)?;
+        }
+        None => {
+            // Use remote tempate
+            download_project_template(&project_info).await?;
+        }
+    }
 
     // Post-process
     post_process(project_info)?;
@@ -323,4 +334,29 @@ fn get_render_config() -> RenderConfig<'static> {
         .with_fg(Color::LightGreen);
 
     render_config
+}
+
+
+fn copy_dir_recursive(src: &Path, dest: &Path) -> io::Result<()> {
+    if !src.is_dir() {
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "Source is not a directory"));
+    }
+
+    // Create the target folder
+    fs::create_dir_all(dest)?; 
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let file_type = entry.file_type()?;
+        let src_path = entry.path();
+        let dest_path = dest.join(entry.file_name());
+
+        if file_type.is_dir() {
+            // Recursively process
+            copy_dir_recursive(&src_path, &dest_path)?;
+        } else {
+            // Copy file
+            fs::copy(&src_path, &dest_path)?;
+        }
+    }
+    Ok(())
 }

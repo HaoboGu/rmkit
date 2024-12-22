@@ -37,5 +37,9 @@ pub enum Commands {
         /// Whether the keyboard is split
         #[arg(long)]
         split: Option<bool>,
+
+        /// (Optional) Local project template path
+        #[arg(long)]
+        local_path: Option<String>,
     },
 }
