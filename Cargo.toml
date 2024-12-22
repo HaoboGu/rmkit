@@ -1,6 +1,6 @@
 [package]
 name = "rmkit"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
 homepage = "https://github.com/haobogu/rmkit"
 repository = "https://github.com/haobogu/rmkit"
