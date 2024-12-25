@@ -43,13 +43,13 @@ pub enum Commands {
         local_path: Option<String>,
     },
 
-    /// Get chip name
+    /// Get chip name from keyboard.toml
     GetChip {
         /// Path to keyboard.toml file
         #[arg(long)]
         keyboard_toml_path: String,
     },
-    /// Get project name
+    /// Get project name from keyboard.toml
     GetProjectName {
         /// Path to keyboard.toml file
         #[arg(long)]
