@@ -39,6 +39,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
             println!("{}", project_info.chip);
             Ok(())
         }
+        args::Commands::GetProjectName { keyboard_toml_path } => {
+            let project_info = parse_keyboard_toml(&keyboard_toml_path, None)?;
+            println!("{}", project_info.project_name);
+            Ok(())
+        }
     }
 }
 

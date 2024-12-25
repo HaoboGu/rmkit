@@ -48,5 +48,11 @@ pub enum Commands {
         /// Path to keyboard.toml file
         #[arg(long)]
         keyboard_toml_path: String,
+    },
+    /// Get project name
+    GetProjectName {
+        /// Path to keyboard.toml file
+        #[arg(long)]
+        keyboard_toml_path: String,
     }
 }
