@@ -1371,7 +1371,7 @@ dependencies = [
 
 [[package]]
 name = "rmkit"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "clap",
  "futures",
