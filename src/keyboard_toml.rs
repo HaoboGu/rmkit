@@ -7,6 +7,7 @@ use std::{
 use crate::{chip::get_board_chip_map, config::KeyboardTomlConfig};
 
 /// All info needed to create a RMK project
+#[derive(Debug)]
 pub(crate) struct ProjectInfo {
     /// Project name
     pub(crate) project_name: String,
