@@ -1,6 +1,6 @@
 [package]
 name = "rmkit"
-version = "0.0.7"
+version = "0.0.8"
 edition = "2021"
 homepage = "https://github.com/haobogu/rmkit"
 repository = "https://github.com/haobogu/rmkit"
@@ -21,6 +21,7 @@ futures-util = "0.3.31"
 walkdir = "2"
 inquire = "0.7.5"
 openssl = { version = "0.10.59", features = ["vendored"] }
+cargo_toml = "0.21"
 
 # The profile that 'dist' will build with
 [profile.dist]

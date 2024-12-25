@@ -41,8 +41,11 @@ pub enum Commands {
         /// (Optional) Local project template path
         #[arg(long)]
         local_path: Option<String>,
-    },
 
+        /// (Optional) Whether the keyboard is row2col
+        #[arg(long)]
+        row2col: Option<bool>,
+    },
     /// Get chip name from keyboard.toml
     GetChip {
         /// Path to keyboard.toml file

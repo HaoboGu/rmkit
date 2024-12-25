@@ -33,7 +33,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             chip,
             split,
             local_path,
-        } => init_project(project_name, chip, split, local_path).await,
+            row2col,
+        } => init_project(project_name, chip, split, local_path, row2col).await,
         args::Commands::GetChip { keyboard_toml_path } => {
             let project_info = parse_keyboard_toml(&keyboard_toml_path, None)?;
             println!("{}", project_info.chip);
@@ -105,6 +106,19 @@ fn post_process(project_info: ProjectInfo) -> Result<(), Box<dyn Error>> {
     // Replace {{ chip_name }} in toml files
     replace_in_folder(&project_info, "toml", "{{ chip_name }}", &project_info.chip)?;
 
+    // Replace {{ uf2_key }} in toml files
+    replace_in_folder(
+        &project_info,
+        "toml",
+        "{{ uf2_key }}",
+        &project_info.uf2_key,
+    )?;
+
+    // If the keyboard is row2col, update generated Cargo.toml
+    if project_info.row2col {
+        disable_rmk_default_feature(&project_info.target_dir)?;
+    }
+
     Ok(())
 }
 
@@ -144,6 +158,7 @@ async fn init_project(
     chip: Option<String>,
     split: Option<bool>,
     local_path: Option<String>,
+    row2col: Option<bool>,
 ) -> Result<(), Box<dyn Error>> {
     let project_name = if project_name.is_none() {
         Text::new("Project Name:").prompt()?.replace(" ", "_")
@@ -162,6 +177,7 @@ async fn init_project(
     } else {
         chip.unwrap()
     };
+    let row2col = row2col.unwrap_or(false);
 
     // Get project info from parameters
     let target_dir = PathBuf::from(&project_name);
@@ -172,11 +188,20 @@ async fn init_project(
     } else {
         chip.clone()
     };
+
+    let uf2_key = if chip.starts_with("stm32") {
+        chip[..7].to_string()
+    } else {
+        chip.clone()
+    };
+
     let project_info = ProjectInfo {
         project_name,
         target_dir,
         remote_folder,
         chip,
+        uf2_key,
+        row2col,
     };
 
     // Download template
@@ -359,6 +384,7 @@ where
     println!("✅ Project created, path: {}", output_path.display());
     Ok(())
 }
+
 fn get_render_config() -> RenderConfig<'static> {
     let mut render_config = RenderConfig::default();
     render_config.prompt_prefix = Styled::new("?").with_fg(Color::LightRed);
@@ -398,5 +424,41 @@ fn copy_dir_recursive(src: &Path, dest: &Path) -> io::Result<()> {
             fs::copy(&src_path, &dest_path)?;
         }
     }
+    Ok(())
+}
+
+/// 更新指定路径下 Cargo.toml 文件中的 rmk 依赖配置
+/// 将 rmk = { version = "...", features = ["..."] } 替换为
+/// rmk = { version = "...", default-features = false, features = ["..."] }
+///
+/// # Arguments
+/// * `target_dir` - 包含 Cargo.toml 的目标目录路径
+///
+/// # Returns
+/// * `Result<(), String>` - 成功返回 Ok，失败返回 Err
+fn disable_rmk_default_feature(target_dir: &PathBuf) -> Result<(), String> {
+    // 定义 Cargo.toml 的路径
+    let cargo_toml_path = Path::new(target_dir).join("Cargo.toml");
+
+    // 使用 cargo_toml 解析为 Manifest
+    let mut manifest =
+        cargo_toml::Manifest::from_path(&cargo_toml_path).map_err(|e| e.to_string())?;
+
+    // 获取 dependencies 并修改 rmk 配置
+    if let Some(cargo_toml::Dependency::Detailed(rmk_dep)) = manifest.dependencies.get_mut("rmk") {
+        // 设置 default-features = false，并保留原始 version 和 features
+        rmk_dep.default_features = false
+    } else {
+        return Err("No valid rmk dependency found".to_string());
+    }
+
+    // 将修改后的 Manifest 转换为字符串
+    let updated_toml = toml::to_string(&manifest)
+        .map_err(|e| format!("Failed to serialize updated Cargo.toml: {}", e))?;
+
+    // 将更新后的内容写回文件
+    fs::write(&cargo_toml_path, updated_toml)
+        .map_err(|e| format!("Failed to write updated Cargo.toml: {}", e))?;
+
     Ok(())
 }

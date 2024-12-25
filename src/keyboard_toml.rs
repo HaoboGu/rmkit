@@ -16,6 +16,10 @@ pub(crate) struct ProjectInfo {
     pub(crate) remote_folder: String,
     /// Chip name
     pub(crate) chip: String,
+    /// Key for uf2 generation
+    pub(crate) uf2_key: String,
+    /// Whether the project is row2col, row2col needs special post-process
+    pub(crate) row2col: bool,
 }
 
 /// Parse `keyboard.toml`, get all needed project info for creating a new RMK project
@@ -58,6 +62,16 @@ pub(crate) fn parse_keyboard_toml(
         }
     }?;
 
+    let row2col = if let Some(m) = keyboard_toml_config.clone().matrix {
+        m.row2col
+    } else {
+        if let Some(s) = keyboard_toml_config.clone().split {
+            s.central.matrix.row2col
+        } else {
+            false
+        }
+    };
+
     let matrix_type = match (keyboard_toml_config.matrix, keyboard_toml_config.split) {
         (None, None) => {
             Err("Either 'matrix' or 'split' section must be specified in keyboard.toml".to_string())
@@ -75,11 +89,21 @@ pub(crate) fn parse_keyboard_toml(
         chip.clone()
     };
 
+    let uf2_key = if chip.starts_with("stm32") {
+        chip[..7].to_string()
+    } else {
+        chip.clone()
+    };
+
+
+
     Ok(ProjectInfo {
         project_name,
         target_dir: project_dir,
         remote_folder: folder,
         chip,
+        uf2_key,
+        row2col,
     })
 }
 

@@ -193,6 +193,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "cargo_toml"
+version = "0.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5fbd1fe9db3ebf71b89060adaf7b0504c2d6a425cf061313099547e382c2e472"
+dependencies = [
+ "serde",
+ "toml",
+]
+
+[[package]]
 name = "cc"
 version = "1.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1371,8 +1381,9 @@ dependencies = [
 
 [[package]]
 name = "rmkit"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
+ "cargo_toml",
  "clap",
  "futures",
  "futures-util",
