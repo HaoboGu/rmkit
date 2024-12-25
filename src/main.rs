@@ -292,9 +292,9 @@ where
         // Check whether the remote_folder starts with stm32, do the second search using `stm32xx` and if there's still no matched template, use `stm32` template
         if folder.starts_with("stm32") {
             // Generate template for stm32
-            if folder.len() > 5 {
+            if folder.len() > 7 {
                 // Do the second search, use the stm32's family name
-                let stm32_series = &folder[..5];
+                let stm32_series = &folder[..7];
                 for i in 0..zip.len() {
                     let mut file = zip.by_index(i)?;
                     let file_name = file.enclosed_name().ok_or("Invalid file path")?;
