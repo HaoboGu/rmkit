@@ -34,6 +34,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
             split,
             local_path,
         } => init_project(project_name, chip, split, local_path).await,
+        args::Commands::GetChip { keyboard_toml_path } => {
+            let project_info = parse_keyboard_toml(&keyboard_toml_path, None)?;
+            println!("{}", project_info.chip);
+            Ok(())
+        }
     }
 }
 

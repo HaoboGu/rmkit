@@ -42,4 +42,11 @@ pub enum Commands {
         #[arg(long)]
         local_path: Option<String>,
     },
+
+    /// Get chip name
+    GetChip {
+        /// Path to keyboard.toml file
+        #[arg(long)]
+        keyboard_toml_path: String,
+    }
 }
