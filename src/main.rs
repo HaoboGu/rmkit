@@ -279,30 +279,58 @@ where
     }
 
     if !folder_found {
-        // Check whether the remote_folder starts with stm32, do the second search using `stm32`
+        // Check whether the remote_folder starts with stm32, do the second search using `stm32xx` and if there's still no matched template, use `stm32` template
         if folder.starts_with("stm32") {
             // Generate template for stm32
-            println!("️️🚨 There's no template available for [{folder}], using the default stm32 template. You may need to make further edit.");
-            folder_found = false;
-            for i in 0..zip.len() {
-                let mut file = zip.by_index(i)?;
-                let file_name = file.enclosed_name().ok_or("Invalid file path")?;
+            if folder.len() > 5 {
+                // Do the second search, use the stm32's family name
+                let stm32_series = &folder[..5];
+                for i in 0..zip.len() {
+                    let mut file = zip.by_index(i)?;
+                    let file_name = file.enclosed_name().ok_or("Invalid file path")?;
 
-                // Find the root directory from the ZIP file
-                let segments: Vec<_> = file_name.iter().collect();
-                if segments.len() > 1 && segments[1] == "stm32" {
-                    folder_found = true;
-                    let relative_name = file_name.iter().skip(2).collect::<PathBuf>();
-                    let out_path = output_path.join(relative_name);
+                    // Find the root directory from the ZIP file
+                    let segments: Vec<_> = file_name.iter().collect();
+                    if segments.len() > 1 && segments[1] == stm32_series {
+                        folder_found = true;
+                        let relative_name = file_name.iter().skip(2).collect::<PathBuf>();
+                        let out_path = output_path.join(relative_name);
 
-                    if file.is_dir() {
-                        fs::create_dir_all(&out_path)?;
-                    } else {
-                        if let Some(parent) = out_path.parent() {
-                            fs::create_dir_all(parent)?;
+                        if file.is_dir() {
+                            fs::create_dir_all(&out_path)?;
+                        } else {
+                            if let Some(parent) = out_path.parent() {
+                                fs::create_dir_all(parent)?;
+                            }
+                            let mut outfile = File::create(&out_path)?;
+                            io::copy(&mut file, &mut outfile)?;
                         }
-                        let mut outfile = File::create(&out_path)?;
-                        io::copy(&mut file, &mut outfile)?;
+                    }
+                }
+            }
+            if !folder_found {
+                println!("️️🚨 There's no template available for [{folder}], using the default stm32 template. You may need to make further edit.");
+                // Still not found, use the default stm32 template
+                for i in 0..zip.len() {
+                    let mut file = zip.by_index(i)?;
+                    let file_name = file.enclosed_name().ok_or("Invalid file path")?;
+
+                    // Find the root directory from the ZIP file
+                    let segments: Vec<_> = file_name.iter().collect();
+                    if segments.len() > 1 && segments[1] == "stm32" {
+                        folder_found = true;
+                        let relative_name = file_name.iter().skip(2).collect::<PathBuf>();
+                        let out_path = output_path.join(relative_name);
+
+                        if file.is_dir() {
+                            fs::create_dir_all(&out_path)?;
+                        } else {
+                            if let Some(parent) = out_path.parent() {
+                                fs::create_dir_all(parent)?;
+                            }
+                            let mut outfile = File::create(&out_path)?;
+                            io::copy(&mut file, &mut outfile)?;
+                        }
                     }
                 }
             }
@@ -336,14 +364,16 @@ fn get_render_config() -> RenderConfig<'static> {
     render_config
 }
 
-
 fn copy_dir_recursive(src: &Path, dest: &Path) -> io::Result<()> {
     if !src.is_dir() {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "Source is not a directory"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Source is not a directory",
+        ));
     }
 
     // Create the target folder
-    fs::create_dir_all(dest)?; 
+    fs::create_dir_all(dest)?;
     for entry in fs::read_dir(src)? {
         let entry = entry?;
         let file_type = entry.file_type()?;
