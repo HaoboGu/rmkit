@@ -1,7 +1,7 @@
 //! Should be identical to https://github.com/HaoboGu/rmk/blob/main/rmk-macro/src/config/mod.rs
 //!
 use anyhow::{anyhow, Result};
-use chips::{get_chip, get_chip_info, Board, Chip, ChipInfo};
+use chips::{get_chip, get_chip_info, Board, Chip, ChipInfo, FirmwareFormat};
 use serde::de;
 use serde_derive::Deserialize;
 
@@ -48,6 +48,8 @@ pub struct KeyboardInfo {
     pub board: Option<Board>,
     /// Chip model
     pub chip: Option<Chip>,
+    /// Output format
+    pub firmware_format: FirmwareFormat,
     /// enable usb
     pub usb_enable: Option<bool>,
 }

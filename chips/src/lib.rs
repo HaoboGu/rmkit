@@ -188,12 +188,20 @@ pub struct BoardInfo {
     pub board: Board,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum FirmwareFormat {
     Bin,
     Elf,
     Hex,
     Uf2,
+}
+
+impl Display for FirmwareFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let string_value = serde_json::to_string(self).expect("Enum serialization failed");
+        write!(f, "{}", string_value.trim_matches('"'))
+    }
 }
 
 pub fn get_chip(board: &Board) -> Chip {
@@ -211,57 +219,58 @@ pub fn get_chip(board: &Board) -> Chip {
 
 /// returns metadata about the board
 pub fn get_board_info(board: &Board) -> BoardInfo {
+    // TODO: which ones support split?
     match board {
         Board::NrfMicro => BoardInfo {
-            firmware_format: FirmwareFormat::Bin,
+            firmware_format: FirmwareFormat::Uf2,
             split_support: false,
             name: Board::NrfMicro.to_string(),
             board: Board::NrfMicro,
         },
         Board::BlueMicro840 => BoardInfo {
-            firmware_format: FirmwareFormat::Bin,
+            firmware_format: FirmwareFormat::Bin, // TODO: correct format?
             split_support: false,
             name: Board::BlueMicro840.to_string(),
             board: Board::BlueMicro840,
         },
         Board::PuchiBle => BoardInfo {
-            firmware_format: FirmwareFormat::Bin,
+            firmware_format: FirmwareFormat::Uf2,
             split_support: false,
             name: Board::PuchiBle.to_string(),
             board: Board::PuchiBle,
         },
         Board::NiceNano => BoardInfo {
-            firmware_format: FirmwareFormat::Bin,
+            firmware_format: FirmwareFormat::Uf2,
             split_support: false,
             name: Board::NiceNano.to_string(),
             board: Board::NiceNano,
         },
         Board::NiceNanoV2 => BoardInfo {
-            firmware_format: FirmwareFormat::Bin,
+            firmware_format: FirmwareFormat::Uf2,
             split_support: false,
             name: Board::NiceNanoV2.to_string(),
             board: Board::NiceNanoV2,
         },
         Board::XiaoBle => BoardInfo {
-            firmware_format: FirmwareFormat::Bin,
+            firmware_format: FirmwareFormat::Uf2,
             split_support: false,
             name: Board::XiaoBle.to_string(),
             board: Board::XiaoBle,
         },
         Board::Liatris => BoardInfo {
-            firmware_format: FirmwareFormat::Bin,
-            split_support: false,
+            firmware_format: FirmwareFormat::Uf2,
+            split_support: true,
             name: Board::Liatris.to_string(),
             board: Board::Liatris,
         },
         Board::EliteC => BoardInfo {
-            firmware_format: FirmwareFormat::Bin,
+            firmware_format: FirmwareFormat::Hex,
             split_support: false,
             name: Board::EliteC.to_string(),
             board: Board::EliteC,
         },
         Board::ProMicro => BoardInfo {
-            firmware_format: FirmwareFormat::Bin,
+            firmware_format: FirmwareFormat::Hex,
             split_support: false,
             name: Board::ProMicro.to_string(),
             board: Board::ProMicro,
@@ -271,12 +280,13 @@ pub fn get_board_info(board: &Board) -> BoardInfo {
 
 /// returns metadata about the chip
 pub fn get_chip_info(chip: &Chip) -> ChipInfo {
+    // TODO: fill in supported formats
     match chip {
         Chip::ATMEGA32 => ChipInfo {
             // Microchip (Atmel) ATmega32
             family_id: 0x16573617,
             name: Chip::ATMEGA32.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::ATMEGA32,
         },
@@ -284,7 +294,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Microchip (Atmel) SAML21
             family_id: 0x1851780a,
             name: Chip::SAML21.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::SAML21,
         },
@@ -292,7 +302,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Nordic NRF52
             family_id: 0x1b57745f,
             name: Chip::NRF52.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::NRF52,
         },
@@ -300,7 +310,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ESP32
             family_id: 0x1c5f21b0,
             name: Chip::ESP32.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::ESP32,
         },
@@ -308,7 +318,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ST STM32L1xx
             family_id: 0x1e1f432d,
             name: Chip::STM32L1.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::STM32L1,
         },
@@ -316,7 +326,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ST STM32L0xx
             family_id: 0x202e3a91,
             name: Chip::STM32L0.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::STM32L0,
         },
@@ -324,7 +334,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ST STM32WLxx
             family_id: 0x21460ff0,
             name: Chip::STM32WL.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::STM32WL,
         },
@@ -332,7 +342,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Realtek AmebaZ RTL8710B
             family_id: 0x22e0d6fc,
             name: Chip::RTL8710B.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::RTL8710B,
         },
@@ -340,7 +350,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // NXP LPC55xx
             family_id: 0x2abc77ec,
             name: Chip::LPC55.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::LPC55,
         },
@@ -348,7 +358,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ST STM32G0xx
             family_id: 0x300f5633,
             name: Chip::STM32G0.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::STM32G0,
         },
@@ -356,7 +366,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // GD32F350
             family_id: 0x31d228c6,
             name: Chip::GD32F350.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::GD32F350,
         },
@@ -364,7 +374,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Realtek AmebaD RTL8720D
             family_id: 0x3379CFE2,
             name: Chip::RTL8720D.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::RTL8720D,
         },
@@ -372,7 +382,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ST STM32L5xx
             family_id: 0x04240bdf,
             name: Chip::STM32L5.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::STM32L5,
         },
@@ -380,7 +390,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ST STM32G4xx
             family_id: 0x4c71240a,
             name: Chip::STM32G4.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::STM32G4,
         },
@@ -388,7 +398,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // NXP i.MX RT10XX
             family_id: 0x4fb2d5bd,
             name: Chip::MIMXRT10XX.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::MIMXRT10XX,
         },
@@ -396,7 +406,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Xradiotech 809
             family_id: 0x51e903a8,
             name: Chip::XR809.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::XR809,
         },
@@ -404,7 +414,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ST STM32F7xx
             family_id: 0x53b80f00,
             name: Chip::STM32F7.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::STM32F7,
         },
@@ -412,7 +422,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Microchip (Atmel) SAMD51
             family_id: 0x55114460,
             name: Chip::SAMD51.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::SAMD51,
         },
@@ -420,7 +430,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ST STM32F4xx
             family_id: 0x57755a57,
             name: Chip::STM32F4.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::STM32F4,
         },
@@ -428,7 +438,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Cypress FX2
             family_id: 0x5a18069b,
             name: Chip::FX2.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::FX2,
         },
@@ -436,7 +446,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ST STM32F2xx
             family_id: 0x5d1a0a2e,
             name: Chip::STM32F2.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::STM32F2,
         },
@@ -444,7 +454,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ST STM32F103
             family_id: 0x5ee21072,
             name: Chip::STM32F1.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::STM32F1,
         },
@@ -452,7 +462,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Nordic NRF52833
             family_id: 0x621e937a,
             name: Chip::NRF52833.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::NRF52833,
         },
@@ -460,7 +470,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ST STM32F0xx
             family_id: 0x647824b6,
             name: Chip::STM32F0.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::STM32F0,
         },
@@ -468,7 +478,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Beken 7231U/7231T
             family_id: 0x675a40b0,
             name: Chip::BK7231U.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::BK7231U,
         },
@@ -476,7 +486,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Microchip (Atmel) SAMD21
             family_id: 0x68ed2b88,
             name: Chip::SAMD21.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::SAMD21,
         },
@@ -484,7 +494,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Beken 7251/7252
             family_id: 0x6a82cc42,
             name: Chip::BK7251.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::BK7251,
         },
@@ -492,7 +502,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ST STM32F3xx
             family_id: 0x6b846188,
             name: Chip::STM32F3.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::STM32F3,
         },
@@ -500,7 +510,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ST STM32F407
             family_id: 0x6d0922fa,
             name: Chip::STM32F407.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::STM32F407,
         },
@@ -508,7 +518,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ST STM32H7xx
             family_id: 0x6db66082,
             name: Chip::STM32H7.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::STM32H7,
         },
@@ -516,7 +526,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ST STM32WBxx
             family_id: 0x70d16653,
             name: Chip::STM32WB.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::STM32WB,
         },
@@ -524,7 +534,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Beken 7231N
             family_id: 0x7b3ef230,
             name: Chip::BK7231N.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::BK7231N,
         },
@@ -532,7 +542,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ESP8266
             family_id: 0x7eab61ed,
             name: Chip::ESP8266.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::ESP8266,
         },
@@ -540,7 +550,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // NXP KL32L2x
             family_id: 0x7f83e793,
             name: Chip::KL32L2.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::KL32L2,
         },
@@ -548,7 +558,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ST STM32F407VG
             family_id: 0x8fb060fe,
             name: Chip::STM32F407VG.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::STM32F407VG,
         },
@@ -556,7 +566,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Realtek Ameba1 RTL8710A
             family_id: 0x9fffd543,
             name: Chip::RTL8710A.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::RTL8710A,
         },
@@ -564,7 +574,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Nordic NRF52840
             family_id: 0xada52840,
             name: Chip::NRF52840.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: true,
             chip: Chip::NRF52840,
         },
@@ -572,7 +582,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ESP32-S2
             family_id: 0xbfdd4eee,
             name: Chip::ESP32S2.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::ESP32S2,
         },
@@ -580,7 +590,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ESP32-S3
             family_id: 0xc47e5767,
             name: Chip::ESP32S3.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::ESP32S3,
         },
@@ -588,7 +598,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ESP32-C3
             family_id: 0xd42ba06c,
             name: Chip::ESP32C3.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::ESP32C3,
         },
@@ -596,7 +606,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ESP32-C2
             family_id: 0x2b88d29c,
             name: Chip::ESP32C2.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::ESP32C2,
         },
@@ -604,7 +614,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ESP32-H2
             family_id: 0x332726f6,
             name: Chip::ESP32H2.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::ESP32H2,
         },
@@ -612,7 +622,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ESP32-C6
             family_id: 0x540ddf62,
             name: Chip::ESP32C6.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::ESP32C6,
         },
@@ -620,7 +630,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ESP32-P4
             family_id: 0x3d308e94,
             name: Chip::ESP32P4.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::ESP32P4,
         },
@@ -628,7 +638,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ESP32-C5
             family_id: 0xf71c0343,
             name: Chip::ESP32C5.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::ESP32C5,
         },
@@ -636,7 +646,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ESP32-C61
             family_id: 0x77d850c4,
             name: Chip::ESP32C61.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::ESP32C61,
         },
@@ -644,7 +654,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Boufallo 602
             family_id: 0xde1270b7,
             name: Chip::BL602.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::BL602,
         },
@@ -652,7 +662,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Realtek AmebaZ2 RTL8720C
             family_id: 0xe08f7564,
             name: Chip::RTL8720C.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::RTL8720C,
         },
@@ -660,7 +670,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Raspberry Pi RP2040
             family_id: 0xe48bff56,
             name: Chip::RP2040.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Uf2],
             split_support: true,
             chip: Chip::RP2040,
         },
@@ -668,7 +678,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Raspberry Pi Microcontrollers: Absolute (unpartitioned) download
             family_id: 0xe48bff57,
             name: Chip::Rp2xxxAbsolute.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::Rp2xxxAbsolute,
         },
@@ -676,7 +686,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Raspberry Pi Microcontrollers: Data partition download
             family_id: 0xe48bff58,
             name: Chip::Rp2xxxData.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::Rp2xxxData,
         },
@@ -684,7 +694,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Raspberry Pi RP2350, Secure Arm image
             family_id: 0xe48bff59,
             name: Chip::Rp2350ArmS.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::Rp2350ArmS,
         },
@@ -692,7 +702,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Raspberry Pi RP2350, RISC-V image
             family_id: 0xe48bff5a,
             name: Chip::Rp2350Riscv.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::Rp2350Riscv,
         },
@@ -700,7 +710,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Raspberry Pi RP2350, Non-secure Arm image
             family_id: 0xe48bff5b,
             name: Chip::Rp2350ArmNs.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::Rp2350ArmNs,
         },
@@ -708,7 +718,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ST STM32L4xx
             family_id: 0x00ff6919,
             name: Chip::STM32L4.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::STM32L4,
         },
@@ -716,7 +726,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // GigaDevice GD32VF103
             family_id: 0x9af03e33,
             name: Chip::GD32VF103.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::GD32VF103,
         },
@@ -724,7 +734,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // LISTENAI CSK300x/400x
             family_id: 0x4f6ace52,
             name: Chip::CSK4.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::CSK4,
         },
@@ -732,7 +742,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // LISTENAI CSK60xx
             family_id: 0x6e7348a8,
             name: Chip::CSK6.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::CSK6,
         },
@@ -740,7 +750,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // M0SENSE BL702
             family_id: 0x11de784a,
             name: Chip::M0SENSE.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::M0SENSE,
         },
@@ -748,7 +758,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Sipeed MaixPlay-U4(BL618)
             family_id: 0x4b684d71,
             name: Chip::MaixPlayU4.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::MaixPlayU4,
         },
@@ -756,7 +766,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Renesas RZ/A1LU (R7S7210xx)
             family_id: 0x9517422f,
             name: Chip::RZA1LU.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::RZA1LU,
         },
@@ -764,7 +774,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ST STM32F411xE
             family_id: 0x2dc309c5,
             name: Chip::STM32F411xE.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::STM32F411xE,
         },
@@ -772,7 +782,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ST STM32F411xC
             family_id: 0x06d1097b,
             name: Chip::STM32F411xC.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::STM32F411xC,
         },
@@ -780,7 +790,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Nordic NRF52832xxAA
             family_id: 0x72721d4e,
             name: Chip::NRF52832xxAA.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::NRF52832xxAA,
         },
@@ -788,7 +798,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Nordic NRF52832xxAB
             family_id: 0x6f752678,
             name: Chip::NRF52832xxAB.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::NRF52832xxAB,
         },
@@ -796,7 +806,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // ArteryTek AT32F415
             family_id: 0xa0c97b8e,
             name: Chip::AT32F415.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::AT32F415,
         },
@@ -804,7 +814,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // WCH CH32V2xx and CH32V3xx
             family_id: 0x699b62ec,
             name: Chip::CH32V.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::CH32V,
         },
@@ -812,7 +822,7 @@ pub fn get_chip_info(chip: &Chip) -> ChipInfo {
             // Renesas RA4M1
             family_id: 0x7be8976d,
             name: Chip::RA4M1.to_string(),
-            firmware_formats: vec![],
+            firmware_formats: vec![FirmwareFormat::Hex],
             split_support: false,
             chip: Chip::RA4M1,
         },

@@ -1,6 +1,9 @@
 use crate::rmk_build::build_rmk;
 use anyhow::{anyhow, Result};
-use chips::{get_all_board_info, get_all_chip_info, get_chip, Board, Chip, SelectBoard};
+use chips::{
+    get_all_board_info, get_all_chip_info, get_board_info, get_chip, get_chip_info, Board, Chip,
+    FirmwareFormat, SelectBoard,
+};
 use clap::Parser;
 use futures::stream::StreamExt;
 use inquire::ui::{Attributes, Color, RenderConfig, StyleSheet, Styled};
@@ -119,6 +122,14 @@ fn post_process(project_info: ProjectInfo) -> Result<()> {
         &project_info.chip.to_string(),
     )?;
 
+    // Replace {{ firmware_format }} in toml files
+    replace_in_folder(
+        &project_info,
+        "toml",
+        "{{ firmware_format }}",
+        &project_info.firmware_format.to_string(),
+    )?;
+
     // If the keyboard is row2col, update generated Cargo.toml
     if project_info.row2col {
         disable_rmk_default_feature(&project_info.target_dir).map_err(|e| anyhow!(e))?;
@@ -172,6 +183,8 @@ async fn init_project(
         Select::new("Choose your keyboard type?", vec!["normal", "split"]).prompt()? == "split"
     };
 
+    let mut firmware_format: Option<FirmwareFormat> = None;
+
     if board.is_none() & chip.is_none() {
         let mut boards = get_all_board_info();
         if split {
@@ -187,6 +200,10 @@ async fn init_project(
         .prompt()?
         .into();
 
+        firmware_format = board
+            .clone()
+            .map(|board| get_board_info(&board).firmware_format);
+
         chip = board.map(|board| get_chip(&board));
     }
 
@@ -199,6 +216,14 @@ async fn init_project(
         }
         let chips: Vec<Chip> = chips.into_iter().map(|chip| chip.chip).collect();
         Select::new("Choose your microcontroller", chips).prompt()?
+    };
+
+    let firmware_format = if let Some(firmware_format) = firmware_format {
+        firmware_format
+    } else {
+        let chip_info = get_chip_info(&chip);
+
+        Select::new("Choose your microcontroller", chip_info.firmware_formats).prompt()?
     };
 
     let row2col = row2col.unwrap_or(false);
@@ -219,6 +244,7 @@ async fn init_project(
         remote_folder,
         chip,
         row2col,
+        firmware_format,
     };
 
     // Download template

@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use chips::Chip;
+use chips::{Chip, FirmwareFormat};
 use std::{
     env, fs,
     path::{Path, PathBuf},
@@ -19,6 +19,8 @@ pub(crate) struct ProjectInfo {
     pub(crate) remote_folder: String,
     /// Chip
     pub(crate) chip: Chip,
+    /// Output format
+    pub(crate) firmware_format: FirmwareFormat,
     /// Whether the project is row2col, row2col needs special post-process
     pub(crate) row2col: bool,
 }
@@ -79,6 +81,7 @@ pub(crate) fn parse_keyboard_toml(
         remote_folder: folder,
         chip,
         row2col,
+        firmware_format: keyboard_toml_config.keyboard.firmware_format,
     })
 }
 
