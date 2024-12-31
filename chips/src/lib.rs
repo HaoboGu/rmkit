@@ -22,6 +22,41 @@ pub enum Board {
 }
 static BOARD_VARIANTS: Lazy<Vec<Board>> = Lazy::new(|| Board::iter().collect());
 
+pub struct SelectBoard(Option<Board>);
+
+impl Display for SelectBoard {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let board = &self.0;
+        let board_string = match board {
+            Some(board) => board.to_string(),
+            None => "".to_string(),
+        };
+        write!(f, "{}", board_string)
+    }
+}
+
+impl From<Board> for SelectBoard {
+    fn from(value: Board) -> Self {
+        Self(Some(value))
+    }
+}
+
+impl From<SelectBoard> for Option<Board> {
+    fn from(value: SelectBoard) -> Self {
+        value.0
+    }
+}
+
+impl SelectBoard {
+    pub fn new(board: Option<Board>) -> Self {
+        Self(board)
+    }
+}
+
+pub fn get_all_board_info() -> Vec<BoardInfo> {
+    BOARD_VARIANTS.iter().map(get_board_info).collect()
+}
+
 impl Display for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let string_value = serde_json::to_string(self).expect("Enum serialization failed");
@@ -116,10 +151,7 @@ pub enum Chip {
 static CHIP_VARIANTS: Lazy<Vec<Chip>> = Lazy::new(|| Chip::iter().collect());
 
 pub fn get_all_chip_info() -> Vec<ChipInfo> {
-    CHIP_VARIANTS
-        .iter()
-        .map(|variant| get_info(&variant))
-        .collect()
+    CHIP_VARIANTS.iter().map(get_chip_info).collect()
 }
 
 impl ValueEnum for Chip {
@@ -149,6 +181,14 @@ pub struct ChipInfo {
 }
 
 #[derive(Debug, Clone)]
+pub struct BoardInfo {
+    pub name: String,
+    pub firmware_format: FirmwareFormat,
+    pub split_support: bool,
+    pub board: Board,
+}
+
+#[derive(Debug, Clone)]
 pub enum FirmwareFormat {
     Bin,
     Elf,
@@ -169,9 +209,69 @@ pub fn get_chip(board: &Board) -> Chip {
     }
 }
 
-/// returns the id of a given family
-pub fn get_info(family: &Chip) -> ChipInfo {
-    match family {
+/// returns metadata about the board
+pub fn get_board_info(board: &Board) -> BoardInfo {
+    match board {
+        Board::NrfMicro => BoardInfo {
+            firmware_format: FirmwareFormat::Bin,
+            split_support: false,
+            name: Board::NrfMicro.to_string(),
+            board: Board::NrfMicro,
+        },
+        Board::BlueMicro840 => BoardInfo {
+            firmware_format: FirmwareFormat::Bin,
+            split_support: false,
+            name: Board::BlueMicro840.to_string(),
+            board: Board::BlueMicro840,
+        },
+        Board::PuchiBle => BoardInfo {
+            firmware_format: FirmwareFormat::Bin,
+            split_support: false,
+            name: Board::PuchiBle.to_string(),
+            board: Board::PuchiBle,
+        },
+        Board::NiceNano => BoardInfo {
+            firmware_format: FirmwareFormat::Bin,
+            split_support: false,
+            name: Board::NiceNano.to_string(),
+            board: Board::NiceNano,
+        },
+        Board::NiceNanoV2 => BoardInfo {
+            firmware_format: FirmwareFormat::Bin,
+            split_support: false,
+            name: Board::NiceNanoV2.to_string(),
+            board: Board::NiceNanoV2,
+        },
+        Board::XiaoBle => BoardInfo {
+            firmware_format: FirmwareFormat::Bin,
+            split_support: false,
+            name: Board::XiaoBle.to_string(),
+            board: Board::XiaoBle,
+        },
+        Board::Liatris => BoardInfo {
+            firmware_format: FirmwareFormat::Bin,
+            split_support: false,
+            name: Board::Liatris.to_string(),
+            board: Board::Liatris,
+        },
+        Board::EliteC => BoardInfo {
+            firmware_format: FirmwareFormat::Bin,
+            split_support: false,
+            name: Board::EliteC.to_string(),
+            board: Board::EliteC,
+        },
+        Board::ProMicro => BoardInfo {
+            firmware_format: FirmwareFormat::Bin,
+            split_support: false,
+            name: Board::ProMicro.to_string(),
+            board: Board::ProMicro,
+        },
+    }
+}
+
+/// returns metadata about the chip
+pub fn get_chip_info(chip: &Chip) -> ChipInfo {
+    match chip {
         Chip::ATMEGA32 => ChipInfo {
             // Microchip (Atmel) ATmega32
             family_id: 0x16573617,

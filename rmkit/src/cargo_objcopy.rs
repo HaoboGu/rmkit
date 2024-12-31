@@ -10,17 +10,13 @@ pub fn cargo_objcopy(
     verbosity: u64,
     format: FirmwareFormat,
 ) -> Result<String> {
-    let format_result = match format {
+    let (format, ending) = match format {
         FirmwareFormat::Bin => Ok(("ihex", "hex")),
         FirmwareFormat::Hex => Ok(("binary", "bin")),
         FirmwareFormat::Elf | FirmwareFormat::Uf2 => {
             Err(anyhow!("Firmware Format not supported in objcopy"))
         }
-    };
-    if let Err(e) = format_result {
-        return Err(e);
-    }
-    let (format, ending) = format_result.unwrap();
+    }?;
 
     let output_path = format!("{}.{}", out_name, ending);
     let mut objcopy = Command::new("llvm-objcopy");

@@ -138,7 +138,7 @@ pub fn hex_to_uf2_file(
 mod tests {
     use std::io::Read;
 
-    use chips::{get_info, Chip};
+    use chips::{get_chip_info, Chip};
 
     use super::*;
 
@@ -210,7 +210,7 @@ mod tests {
 
     #[test]
     fn family_should_be_same() {
-        let chip_info = get_info(&Chip::RP2040);
+        let chip_info = get_chip_info(&Chip::RP2040);
         compare_to_python(
             Path::new("./test/rmk.hex"),
             Path::new("./test/rmk_id.uf2"),

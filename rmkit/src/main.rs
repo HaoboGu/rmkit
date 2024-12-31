@@ -1,6 +1,6 @@
 use crate::rmk_build::build_rmk;
 use anyhow::{anyhow, Result};
-use chips::{get_all_chip_info, Chip};
+use chips::{get_all_board_info, get_all_chip_info, get_chip, Board, Chip, SelectBoard};
 use clap::Parser;
 use futures::stream::StreamExt;
 use inquire::ui::{Attributes, Color, RenderConfig, StyleSheet, Styled};
@@ -34,10 +34,11 @@ async fn main() -> Result<()> {
         args::Commands::Init {
             project_name,
             chip,
+            board,
             split,
             local_path,
             row2col,
-        } => init_project(project_name, chip, split, local_path, row2col).await,
+        } => init_project(project_name, chip, board, split, local_path, row2col).await,
         args::Commands::GetChip { keyboard_toml_path } => {
             let project_info = parse_keyboard_toml(&keyboard_toml_path, None)?;
             println!("{}", project_info.chip);
@@ -61,19 +62,19 @@ async fn create_project(
     target_dir: Option<String>,
 ) -> Result<()> {
     // Inquire paths interactively is no argument is specified
-    let keyboard_toml_path = if keyboard_toml_path.is_none() {
+    let keyboard_toml_path = if let Some(keyboard_toml_path) = keyboard_toml_path {
+        keyboard_toml_path
+    } else {
         Text::new("Path to keyboard.toml:")
             .with_default("./keyboard.toml")
             .prompt()?
-    } else {
-        keyboard_toml_path.unwrap()
     };
-    let vial_json_path = if vial_json_path.is_none() {
-        Text::new("Path to vial.json")
-            .with_default(&"./vial.json")
-            .prompt()?
+    let vial_json_path = if let Some(vial_json_path) = vial_json_path {
+        vial_json_path
     } else {
-        vial_json_path.unwrap()
+        Text::new("Path to vial.json")
+            .with_default("./vial.json")
+            .prompt()?
     };
     // Parse keyboard.toml to get project info
     let project_info = parse_keyboard_toml(&keyboard_toml_path, target_dir)?;
@@ -154,34 +155,52 @@ async fn download_project_template(project_info: &ProjectInfo) -> Result<()> {
 /// Initialize project from remote url
 async fn init_project(
     project_name: Option<String>,
-    chip: Option<Chip>,
+    mut chip: Option<Chip>,
+    board: Option<Board>,
     split: Option<bool>,
     local_path: Option<String>,
     row2col: Option<bool>,
 ) -> Result<()> {
-    let project_name = if project_name.is_none() {
+    let project_name = if let Some(project_name) = project_name {
+        project_name.replace(" ", "_")
+    } else {
         Text::new("Project Name:").prompt()?.replace(" ", "_")
-    } else {
-        project_name.unwrap().replace(" ", "_")
     };
-    let split = if split.is_none() {
+    let split = if let Some(split) = split {
+        split
+    } else {
         Select::new("Choose your keyboard type?", vec!["normal", "split"]).prompt()? == "split"
-    } else {
-        split.unwrap()
     };
-    let chip = if chip.is_none() {
+
+    if board.is_none() & chip.is_none() {
+        let mut boards = get_all_board_info();
+        if split {
+            boards.retain(|board| board.split_support);
+        }
+        let mut boards: Vec<SelectBoard> =
+            boards.into_iter().map(|board| board.board.into()).collect();
+        boards.push(SelectBoard::new(None));
+        let board: Option<Board> = Select::new(
+            "Choose your board (Leave empty if you want to select a chip)",
+            boards,
+        )
+        .prompt()?
+        .into();
+
+        chip = board.map(|board| get_chip(&board));
+    }
+
+    let chip = if let Some(chip) = chip {
+        chip
+    } else {
         let mut chips = get_all_chip_info();
         if split {
-            chips = chips
-                .into_iter()
-                .filter(|chip| chip.split_support)
-                .collect();
+            chips.retain(|chip| chip.split_support);
         }
         let chips: Vec<Chip> = chips.into_iter().map(|chip| chip.chip).collect();
         Select::new("Choose your microcontroller", chips).prompt()?
-    } else {
-        chip.unwrap()
     };
+
     let row2col = row2col.unwrap_or(false);
 
     // Get project info from parameters
@@ -244,7 +263,7 @@ where
     let client = Client::new();
     let response = client.get(download_url).send().await?;
     if !response.status().is_success() {
-        return Err(anyhow!("Download failed: {}", response.status()).into());
+        return Err(anyhow!("Download failed: {}", response.status()));
     }
 
     // Temporary file to store the downloaded content
@@ -255,7 +274,7 @@ where
     struct TempFileCleanup<'a> {
         path: &'a Path,
     }
-    impl<'a> Drop for TempFileCleanup<'a> {
+    impl Drop for TempFileCleanup<'_> {
         fn drop(&mut self) {
             if self.path.exists() {
                 if let Err(e) = fs::remove_file(self.path) {

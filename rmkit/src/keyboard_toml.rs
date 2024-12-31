@@ -31,10 +31,10 @@ pub(crate) fn parse_keyboard_toml(
     let keyboard_toml_config = read_keyboard_toml_config(keyboard_toml)?;
 
     let project_name = keyboard_toml_config.keyboard.name.replace(" ", "_");
-    let target_dir = if target_dir.is_none() {
-        project_name.clone()
+    let target_dir = if let Some(target_dir) = target_dir {
+        target_dir
     } else {
-        target_dir.unwrap()
+        project_name.clone()
     };
     let project_dir = env::current_dir()?.join(&target_dir);
 
@@ -48,12 +48,10 @@ pub(crate) fn parse_keyboard_toml(
 
     let row2col = if let Some(m) = keyboard_toml_config.clone().matrix {
         m.row2col
+    } else if let Some(s) = keyboard_toml_config.clone().split {
+        s.central.matrix.row2col
     } else {
-        if let Some(s) = keyboard_toml_config.clone().split {
-            s.central.matrix.row2col
-        } else {
-            false
-        }
+        false
     };
 
     let matrix_type = match (keyboard_toml_config.matrix, keyboard_toml_config.split) {
@@ -102,7 +100,7 @@ pub(crate) fn read_keyboard_toml_config<P: AsRef<Path>>(
         Ok(c) => Ok(c),
         Err(e) => {
             let msg = anyhow!("Failed to parse `keyboard.toml`: {}", e.message());
-            return Err(msg);
+            Err(msg)
         }
     }
 }

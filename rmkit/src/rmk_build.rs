@@ -8,7 +8,7 @@ use anyhow::Result;
 use chips::{ChipInfo, FirmwareFormat};
 
 pub fn build_rmk(verbosity: u64, keyboard_toml_path: &str) -> Result<()> {
-    let keyboard_toml = read_keyboard_toml_config(&keyboard_toml_path)?;
+    let keyboard_toml = read_keyboard_toml_config(keyboard_toml_path)?;
     let chip_info = keyboard_toml.keyboard.get_chip_info()?;
 
     let name = keyboard_toml.keyboard.name;

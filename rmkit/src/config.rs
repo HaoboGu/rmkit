@@ -1,7 +1,7 @@
 //! Should be identical to https://github.com/HaoboGu/rmk/blob/main/rmk-macro/src/config/mod.rs
 //!
 use anyhow::{anyhow, Result};
-use chips::{get_chip, get_info, Board, Chip, ChipInfo};
+use chips::{get_chip, get_chip_info, Board, Chip, ChipInfo};
 use serde::de;
 use serde_derive::Deserialize;
 
@@ -58,10 +58,10 @@ impl KeyboardInfo {
             (None, None) => Err(anyhow!(
                 "Either 'board' or 'chip' must be specified in keyboard.toml"
             )),
-            (Some(board), None) => Ok(get_chip(&board)),
+            (Some(board), None) => Ok(get_chip(board)),
             (None, Some(chip)) => Ok(chip.clone()),
             (Some(board), Some(chip)) => {
-                let board_chip = get_chip(&board);
+                let board_chip = get_chip(board);
                 if chip == &board_chip {
                     Ok(chip.clone())
                 } else {
@@ -73,7 +73,7 @@ impl KeyboardInfo {
         }
     }
     pub fn get_chip_info(&self) -> Result<ChipInfo> {
-        Ok(get_info(&self.get_chip()?))
+        Ok(get_chip_info(&self.get_chip()?))
     }
 }
 

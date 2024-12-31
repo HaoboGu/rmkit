@@ -1,4 +1,4 @@
-use chips::Chip;
+use chips::{Board, Chip};
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -34,6 +34,10 @@ pub enum Commands {
         /// Target chip (e.g., nrf52840)
         #[arg(long)]
         chip: Option<Chip>,
+
+        /// Target board (e.g., liatris)
+        #[arg(long)]
+        board: Option<Board>,
 
         /// Whether the keyboard is split
         #[arg(long)]
