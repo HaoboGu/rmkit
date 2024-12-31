@@ -5,19 +5,18 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
-use families::{get_family_id, ChipFamily};
+use chips::ChipInfo;
 
 use crate::block::Block;
 
 pub mod block;
-pub mod families;
 
 const ADDRESS_MASK: u32 = 0xff;
 const INVERTED_ADDRESS_MASK: u32 = !ADDRESS_MASK;
 
 pub fn hex_to_uf2(
     hex_lines: impl Iterator<Item = impl AsRef<str>>,
-    family: Option<ChipFamily>,
+    chip_info: &Option<ChipInfo>,
 ) -> Result<Vec<u8>> {
     let mut upper: u32 = 0;
     let mut app_start_address: Option<u32> = None;
@@ -98,7 +97,7 @@ pub fn hex_to_uf2(
 
     let number_of_blocks = blocks.len() as u32;
 
-    let family_id = family.map(get_family_id);
+    let family_id = chip_info.as_ref().map(|info| info.family_id);
 
     Ok(blocks
         .iter()
@@ -114,7 +113,7 @@ pub fn hex_to_uf2(
 pub fn hex_to_uf2_file(
     hex_file: &Path,
     output_path: &Path,
-    family: Option<ChipFamily>,
+    family: &Option<ChipInfo>,
 ) -> Result<()> {
     let binary_buffer = BufReader::new(File::open(hex_file).expect("Couldn't open input file!"));
 
@@ -139,6 +138,8 @@ pub fn hex_to_uf2_file(
 mod tests {
     use std::io::Read;
 
+    use chips::{get_info, Chip};
+
     use super::*;
 
     #[test]
@@ -152,7 +153,7 @@ mod tests {
 :100050002CF8196E196E196E052000F02FF8012189
 :100060000842F9D1002199601B49196000215960AB";
 
-        let uf2_bytes = hex_to_uf2(static_string.lines(), None);
+        let uf2_bytes = hex_to_uf2(static_string.lines(), &None);
 
         println!("{uf2_bytes:X?}");
     }
@@ -161,7 +162,7 @@ mod tests {
         input: &Path,
         output: &Path,
         python_out: &Path,
-        family: Option<ChipFamily>,
+        family: &Option<ChipInfo>,
     ) {
         hex_to_uf2_file(input, output, family).unwrap();
 
@@ -203,17 +204,18 @@ mod tests {
             Path::new("./test/rmk.hex"),
             Path::new("./test/rmk.uf2"),
             Path::new("./test/rmk_py.uf2"),
-            None,
+            &None,
         );
     }
 
     #[test]
     fn family_should_be_same() {
+        let chip_info = get_info(&Chip::RP2040);
         compare_to_python(
             Path::new("./test/rmk.hex"),
             Path::new("./test/rmk_id.uf2"),
             Path::new("./test/rmk_py_id.uf2"),
-            Some(ChipFamily::RP2040),
+            &Some(chip_info),
         );
     }
 }

@@ -139,6 +139,7 @@ impl Display for Chip {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct ChipInfo {
     pub family_id: u32,
     pub name: String,
@@ -147,6 +148,7 @@ pub struct ChipInfo {
     pub chip: Chip,
 }
 
+#[derive(Debug, Clone)]
 pub enum FirmwareFormat {
     Bin,
     Elf,

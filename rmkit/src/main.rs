@@ -1,6 +1,5 @@
 use crate::rmk_build::build_rmk;
 use anyhow::{anyhow, Result};
-use chip::get_chip_options;
 use chips::{get_all_chip_info, Chip};
 use clap::Parser;
 use futures::stream::StreamExt;
@@ -16,7 +15,7 @@ use zip::ZipArchive;
 
 mod args;
 mod cargo_build;
-mod chip;
+mod cargo_objcopy;
 #[allow(dead_code)]
 mod config;
 mod keyboard_toml;

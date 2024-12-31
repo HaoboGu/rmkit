@@ -4,12 +4,12 @@ version = "0.0.9"
 edition = "2021"
 homepage = "https://github.com/haobogu/rmkit"
 repository = "https://github.com/haobogu/rmkit"
-resolver = "2"
 description = "rmkit is a toolkit set for RMK keyboard firmware"
 license = "Apache-2.0"
 
 [dependencies]
 chips = { version = "0.1.0", path = "../chips" }
+hex-to-uf2 = { version = "0.1.0", path = "../hex-to-uf2" }
 clap = { version = "4.5.23", features = ["derive", "string"] }
 toml = "0.8"
 serde = "1.0"
@@ -25,8 +25,3 @@ openssl = { version = "0.10.59", features = ["vendored"] }
 cargo_toml = "0.21"
 anyhow = "1.0.95"
 cargo_metadata = "0.19.1"
-
-# The profile that 'dist' will build with
-[profile.dist]
-inherits = "release"
-lto = "thin"

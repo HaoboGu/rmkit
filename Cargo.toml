@@ -1,2 +1,8 @@
 [workspace]
 members = ["rmkit", "hex-to-uf2", "chips"]
+resolver = "2"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"

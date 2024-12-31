@@ -716,6 +716,7 @@ name = "hex-to-uf2"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chips",
  "clap",
 ]
 
@@ -1448,6 +1449,7 @@ dependencies = [
  "clap",
  "futures",
  "futures-util",
+ "hex-to-uf2",
  "inquire",
  "openssl",
  "reqwest",

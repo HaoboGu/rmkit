@@ -1,12 +1,12 @@
 use anyhow::{anyhow, Result};
-use chips::{get_chip, Chip};
+use chips::Chip;
 use std::{
     env, fs,
     path::{Path, PathBuf},
     process,
 };
 
-use crate::{chip::get_board_chip_map, config::KeyboardTomlConfig};
+use crate::config::KeyboardTomlConfig;
 
 /// All info needed to create a RMK project
 #[derive(Debug)]
@@ -44,26 +44,7 @@ pub(crate) fn parse_keyboard_toml(
     }
 
     // Check keyboard.toml
-    let chip = match (
-        keyboard_toml_config.keyboard.board.as_ref(),
-        keyboard_toml_config.keyboard.chip.as_ref(),
-    ) {
-        (None, None) => Err(anyhow!(
-            "Either 'board' or 'chip' must be specified in keyboard.toml"
-        )),
-        (Some(board), None) => Ok(get_chip(&board)),
-        (None, Some(chip)) => Ok(chip.clone()),
-        (Some(board), Some(chip)) => {
-            let board_chip = get_chip(&board);
-            if chip == &board_chip {
-                Ok(chip.clone())
-            } else {
-                Err(anyhow!(
-                    "The board '{board:?} usually uses the chip '{board_chip:?}', but you specified the chip '{chip:?}'. Consider removing the board config from keyboard.toml."
-                ))
-            }
-        }
-    }?;
+    let chip = keyboard_toml_config.keyboard.get_chip()?;
 
     let row2col = if let Some(m) = keyboard_toml_config.clone().matrix {
         m.row2col

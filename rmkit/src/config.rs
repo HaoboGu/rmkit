@@ -1,6 +1,7 @@
 //! Should be identical to https://github.com/HaoboGu/rmk/blob/main/rmk-macro/src/config/mod.rs
 //!
-use chips::{Board, Chip};
+use anyhow::{anyhow, Result};
+use chips::{get_chip, get_info, Board, Chip, ChipInfo};
 use serde::de;
 use serde_derive::Deserialize;
 
@@ -49,6 +50,31 @@ pub struct KeyboardInfo {
     pub chip: Option<Chip>,
     /// enable usb
     pub usb_enable: Option<bool>,
+}
+
+impl KeyboardInfo {
+    pub fn get_chip(&self) -> Result<Chip> {
+        match (self.board.as_ref(), self.chip.as_ref()) {
+            (None, None) => Err(anyhow!(
+                "Either 'board' or 'chip' must be specified in keyboard.toml"
+            )),
+            (Some(board), None) => Ok(get_chip(&board)),
+            (None, Some(chip)) => Ok(chip.clone()),
+            (Some(board), Some(chip)) => {
+                let board_chip = get_chip(&board);
+                if chip == &board_chip {
+                    Ok(chip.clone())
+                } else {
+                    Err(anyhow!(
+                        "The board '{board:?} usually uses the chip '{board_chip:?}', but you specified the chip '{chip:?}'. Consider removing the board config from keyboard.toml."
+                    ))
+                }
+            }
+        }
+    }
+    pub fn get_chip_info(&self) -> Result<ChipInfo> {
+        Ok(get_info(&self.get_chip()?))
+    }
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
