@@ -1,0 +1,19 @@
+[package]
+name = "hex-to-uf2"
+version = "0.1.0"
+edition = "2021"
+readme = "../README.md"
+repository = "https://git.sr.ht/~fenris/hex-to-uf2"
+description = "Library to convert hex to uf2"
+license-file = "../LICENSE.md"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+anyhow = "1.0.94"
+clap = { version = "4.5.23", optional = true }
+
+[features]
+default = []
+clap = ["dep:clap"]

@@ -1,3 +1,4 @@
+use chips::Chip;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -32,7 +33,7 @@ pub enum Commands {
 
         /// Target chip (e.g., nrf52840)
         #[arg(long)]
-        chip: Option<String>,
+        chip: Option<Chip>,
 
         /// Whether the keyboard is split
         #[arg(long)]
@@ -57,5 +58,14 @@ pub enum Commands {
         /// Path to keyboard.toml file
         #[arg(long)]
         keyboard_toml_path: String,
-    }
+    },
+    /// Builds the project according to keyboard.toml. Automatically converts the artifacts to the desired format.
+    Build {
+        /// Verbosity of build output
+        #[arg(long)]
+        verbosity: u64,
+        /// Path to keyboard.toml file
+        #[arg(long, default_value = "./keyboard.toml")]
+        keyboard_toml_path: String,
+    },
 }

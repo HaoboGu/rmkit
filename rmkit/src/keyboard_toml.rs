@@ -1,3 +1,5 @@
+use anyhow::{anyhow, Result};
+use chips::{get_chip, Chip};
 use std::{
     env, fs,
     path::{Path, PathBuf},
@@ -15,10 +17,8 @@ pub(crate) struct ProjectInfo {
     pub(crate) target_dir: PathBuf,
     /// Remote folder name which contains the template
     pub(crate) remote_folder: String,
-    /// Chip name
-    pub(crate) chip: String,
-    /// Key for uf2 generation
-    pub(crate) uf2_key: String,
+    /// Chip
+    pub(crate) chip: Chip,
     /// Whether the project is row2col, row2col needs special post-process
     pub(crate) row2col: bool,
 }
@@ -27,7 +27,7 @@ pub(crate) struct ProjectInfo {
 pub(crate) fn parse_keyboard_toml(
     keyboard_toml: &String,
     target_dir: Option<String>,
-) -> Result<ProjectInfo, Box<dyn std::error::Error>> {
+) -> Result<ProjectInfo> {
     let keyboard_toml_config = read_keyboard_toml_config(keyboard_toml)?;
 
     let project_name = keyboard_toml_config.keyboard.name.replace(" ", "_");
@@ -45,21 +45,23 @@ pub(crate) fn parse_keyboard_toml(
 
     // Check keyboard.toml
     let chip = match (
-        keyboard_toml_config.keyboard.board.as_deref(),
-        keyboard_toml_config.keyboard.chip.as_deref(),
+        keyboard_toml_config.keyboard.board.as_ref(),
+        keyboard_toml_config.keyboard.chip.as_ref(),
     ) {
-        (None, None) => {
-            Err("Either 'board' or 'chip' must be specified in keyboard.toml".to_string())
-        }
-        (Some(board), None) => {
-            let map = get_board_chip_map();
-            map.get(board.to_lowercase().as_str())
-                .map(|chip| chip.to_string())
-                .ok_or_else(|| format!("Unsupported board '{}'", board))
-        }
-        (None, Some(chip)) => Ok(chip.to_string().to_lowercase()),
-        (Some(_), Some(_)) => {
-            Err("'board' and 'chip' cannot both be specified in keyboard.toml".to_string())
+        (None, None) => Err(anyhow!(
+            "Either 'board' or 'chip' must be specified in keyboard.toml"
+        )),
+        (Some(board), None) => Ok(get_chip(&board)),
+        (None, Some(chip)) => Ok(chip.clone()),
+        (Some(board), Some(chip)) => {
+            let board_chip = get_chip(&board);
+            if chip == &board_chip {
+                Ok(chip.clone())
+            } else {
+                Err(anyhow!(
+                    "The board '{board:?} usually uses the chip '{board_chip:?}', but you specified the chip '{chip:?}'. Consider removing the board config from keyboard.toml."
+                ))
+            }
         }
     }?;
 
@@ -74,36 +76,29 @@ pub(crate) fn parse_keyboard_toml(
     };
 
     let matrix_type = match (keyboard_toml_config.matrix, keyboard_toml_config.split) {
-        (None, None) => {
-            Err("Either 'matrix' or 'split' section must be specified in keyboard.toml".to_string())
-        }
+        (None, None) => Err(anyhow!(
+            "Either 'matrix' or 'split' section must be specified in keyboard.toml"
+        )),
         (None, Some(_)) => Ok("split".to_string()),
         (Some(_), None) => Ok("normal".to_string()),
-        (Some(_), Some(_)) => {
-            Err("'matrix' and 'split' cannot both be specified in keyboard.toml".to_string())
-        }
+        (Some(_), Some(_)) => Err(anyhow!(
+            "'matrix' and 'split' cannot both be specified in keyboard.toml"
+        )),
     }?;
 
+    let chip_name = chip.to_string();
+
     let folder = if matrix_type == "split" {
-        format!("{}_{}", chip, matrix_type)
+        format!("{}_{}", &chip_name, matrix_type)
     } else {
-        chip.clone()
+        chip_name.clone()
     };
-
-    let uf2_key = if chip.starts_with("stm32") {
-        chip[..7].to_string()
-    } else {
-        chip.clone()
-    };
-
-
 
     Ok(ProjectInfo {
         project_name,
         target_dir: project_dir,
         remote_folder: folder,
         chip,
-        uf2_key,
         row2col,
     })
 }
@@ -111,12 +106,12 @@ pub(crate) fn parse_keyboard_toml(
 /// Read the `keyboard.toml` configuration file
 pub(crate) fn read_keyboard_toml_config<P: AsRef<Path>>(
     keyboard_toml: P,
-) -> Result<KeyboardTomlConfig, String> {
+) -> Result<KeyboardTomlConfig> {
     // Read the keyboard configuration file in the project root
     let s = match fs::read_to_string(keyboard_toml) {
         Ok(s) => s,
         Err(e) => {
-            let msg = format!("Failed to read `keyboard.toml` configuration file: {}", e);
+            let msg = anyhow!("Failed to read `keyboard.toml` configuration file: {}", e);
             return Err(msg);
         }
     };
@@ -125,7 +120,7 @@ pub(crate) fn read_keyboard_toml_config<P: AsRef<Path>>(
     match toml::from_str(&s) {
         Ok(c) => Ok(c),
         Err(e) => {
-            let msg = format!("Failed to parse `keyboard.toml`: {}", e.message());
+            let msg = anyhow!("Failed to parse `keyboard.toml`: {}", e.message());
             return Err(msg);
         }
     }
