@@ -1,11 +1,15 @@
-use chip::get_chip_options;
+use crate::rmk_build::build_rmk;
+use anyhow::{anyhow, Result};
+use chips::{
+    get_all_board_info, get_all_chip_info, get_board_info, get_chip, get_chip_info, Board, Chip,
+    FirmwareFormat, SelectBoard,
+};
 use clap::Parser;
 use futures::stream::StreamExt;
 use inquire::ui::{Attributes, Color, RenderConfig, StyleSheet, Styled};
 use inquire::{Select, Text};
 use keyboard_toml::{parse_keyboard_toml, ProjectInfo};
 use reqwest::Client;
-use std::error::Error;
 use std::fs;
 use std::fs::File;
 use std::io::{self, Write};
@@ -13,13 +17,15 @@ use std::path::{Path, PathBuf};
 use zip::ZipArchive;
 
 mod args;
-mod chip;
+mod cargo_build;
+mod cargo_objcopy;
 #[allow(dead_code)]
 mod config;
 mod keyboard_toml;
+mod rmk_build;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<()> {
     inquire::set_global_render_config(get_render_config());
     let args = args::Args::parse();
     match args.command {
@@ -31,10 +37,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         args::Commands::Init {
             project_name,
             chip,
+            board,
             split,
             local_path,
             row2col,
-        } => init_project(project_name, chip, split, local_path, row2col).await,
+        } => init_project(project_name, chip, board, split, local_path, row2col).await,
         args::Commands::GetChip { keyboard_toml_path } => {
             let project_info = parse_keyboard_toml(&keyboard_toml_path, None)?;
             println!("{}", project_info.chip);
@@ -45,6 +52,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
             println!("{}", project_info.project_name);
             Ok(())
         }
+        args::Commands::Build {
+            verbosity,
+            keyboard_toml_path,
+        } => build_rmk(verbosity, &keyboard_toml_path),
     }
 }
 
@@ -52,21 +63,21 @@ async fn create_project(
     keyboard_toml_path: Option<String>,
     vial_json_path: Option<String>,
     target_dir: Option<String>,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<()> {
     // Inquire paths interactively is no argument is specified
-    let keyboard_toml_path = if keyboard_toml_path.is_none() {
+    let keyboard_toml_path = if let Some(keyboard_toml_path) = keyboard_toml_path {
+        keyboard_toml_path
+    } else {
         Text::new("Path to keyboard.toml:")
             .with_default("./keyboard.toml")
             .prompt()?
-    } else {
-        keyboard_toml_path.unwrap()
     };
-    let vial_json_path = if vial_json_path.is_none() {
-        Text::new("Path to vial.json")
-            .with_default(&"./vial.json")
-            .prompt()?
+    let vial_json_path = if let Some(vial_json_path) = vial_json_path {
+        vial_json_path
     } else {
-        vial_json_path.unwrap()
+        Text::new("Path to vial.json")
+            .with_default("./vial.json")
+            .prompt()?
     };
     // Parse keyboard.toml to get project info
     let project_info = parse_keyboard_toml(&keyboard_toml_path, target_dir)?;
@@ -88,7 +99,7 @@ async fn create_project(
 }
 
 /// Postprocessing after generating project
-fn post_process(project_info: ProjectInfo) -> Result<(), Box<dyn Error>> {
+fn post_process(project_info: ProjectInfo) -> Result<()> {
     // Replace {{ project_name }} in toml/json files
     replace_in_folder(
         &project_info,
@@ -104,30 +115,30 @@ fn post_process(project_info: ProjectInfo) -> Result<(), Box<dyn Error>> {
     )?;
 
     // Replace {{ chip_name }} in toml files
-    replace_in_folder(&project_info, "toml", "{{ chip_name }}", &project_info.chip)?;
-
-    // Replace {{ uf2_key }} in toml files
     replace_in_folder(
         &project_info,
         "toml",
-        "{{ uf2_key }}",
-        &project_info.uf2_key,
+        "{{ chip_name }}",
+        &project_info.chip.to_string(),
+    )?;
+
+    // Replace {{ firmware_format }} in toml files
+    replace_in_folder(
+        &project_info,
+        "toml",
+        "{{ firmware_format }}",
+        &project_info.firmware_format.to_string(),
     )?;
 
     // If the keyboard is row2col, update generated Cargo.toml
     if project_info.row2col {
-        disable_rmk_default_feature(&project_info.target_dir)?;
+        disable_rmk_default_feature(&project_info.target_dir).map_err(|e| anyhow!(e))?;
     }
 
     Ok(())
 }
 
-fn replace_in_folder(
-    project_info: &ProjectInfo,
-    ext: &str,
-    from: &str,
-    to: &str,
-) -> Result<(), Box<dyn Error>> {
+fn replace_in_folder(project_info: &ProjectInfo, ext: &str, from: &str, to: &str) -> Result<()> {
     let walker = walkdir::WalkDir::new(&project_info.target_dir)
         .into_iter()
         .filter_map(|e| e.ok())
@@ -141,7 +152,7 @@ fn replace_in_folder(
     Ok(())
 }
 
-async fn download_project_template(project_info: &ProjectInfo) -> Result<(), Box<dyn Error>> {
+async fn download_project_template(project_info: &ProjectInfo) -> Result<()> {
     let user = "HaoboGu";
     let repo = "rmk-template";
     let branch = "feat/rework";
@@ -155,28 +166,66 @@ async fn download_project_template(project_info: &ProjectInfo) -> Result<(), Box
 /// Initialize project from remote url
 async fn init_project(
     project_name: Option<String>,
-    chip: Option<String>,
+    mut chip: Option<Chip>,
+    board: Option<Board>,
     split: Option<bool>,
     local_path: Option<String>,
     row2col: Option<bool>,
-) -> Result<(), Box<dyn Error>> {
-    let project_name = if project_name.is_none() {
+) -> Result<()> {
+    let project_name = if let Some(project_name) = project_name {
+        project_name.replace(" ", "_")
+    } else {
         Text::new("Project Name:").prompt()?.replace(" ", "_")
-    } else {
-        project_name.unwrap().replace(" ", "_")
     };
-    let split = if split.is_none() {
+    let split = if let Some(split) = split {
+        split
+    } else {
         Select::new("Choose your keyboard type?", vec!["normal", "split"]).prompt()? == "split"
-    } else {
-        split.unwrap()
     };
-    let chip = if chip.is_none() {
-        Select::new("Choose your microcontroller", get_chip_options(split))
-            .prompt()?
-            .to_string()
+
+    let mut firmware_format: Option<FirmwareFormat> = None;
+
+    if board.is_none() & chip.is_none() {
+        let mut boards = get_all_board_info();
+        if split {
+            boards.retain(|board| board.split_support);
+        }
+        let mut boards: Vec<SelectBoard> =
+            boards.into_iter().map(|board| board.board.into()).collect();
+        boards.push(SelectBoard::new(None));
+        let board: Option<Board> = Select::new(
+            "Choose your board (Leave empty if you want to select a chip)",
+            boards,
+        )
+        .prompt()?
+        .into();
+
+        firmware_format = board
+            .clone()
+            .map(|board| get_board_info(&board).firmware_format);
+
+        chip = board.map(|board| get_chip(&board));
+    }
+
+    let chip = if let Some(chip) = chip {
+        chip
     } else {
-        chip.unwrap()
+        let mut chips = get_all_chip_info();
+        if split {
+            chips.retain(|chip| chip.split_support);
+        }
+        let chips: Vec<Chip> = chips.into_iter().map(|chip| chip.chip).collect();
+        Select::new("Choose your microcontroller", chips).prompt()?
     };
+
+    let firmware_format = if let Some(firmware_format) = firmware_format {
+        firmware_format
+    } else {
+        let chip_info = get_chip_info(&chip);
+
+        Select::new("Choose your microcontroller", chip_info.firmware_formats).prompt()?
+    };
+
     let row2col = row2col.unwrap_or(false);
 
     // Get project info from parameters
@@ -186,13 +235,7 @@ async fn init_project(
     let remote_folder = if split {
         format!("{}_{}", chip, "split")
     } else {
-        chip.clone()
-    };
-
-    let uf2_key = if chip.starts_with("stm32") {
-        chip[..7].to_string()
-    } else {
-        chip.clone()
+        chip.to_string()
     };
 
     let project_info = ProjectInfo {
@@ -200,8 +243,8 @@ async fn init_project(
         target_dir,
         remote_folder,
         chip,
-        uf2_key,
         row2col,
+        firmware_format,
     };
 
     // Download template
@@ -228,11 +271,7 @@ async fn init_project(
 /// - `download_url`: GitHub repository link
 /// - `output_path`: Target extraction path
 /// - `folder`: Specific subdirectory to extract
-async fn download_with_progress<P>(
-    download_url: &str,
-    output_path: P,
-    folder: &str,
-) -> Result<(), Box<dyn Error>>
+async fn download_with_progress<P>(download_url: &str, output_path: P, folder: &str) -> Result<()>
 where
     P: AsRef<Path>,
 {
@@ -250,7 +289,7 @@ where
     let client = Client::new();
     let response = client.get(download_url).send().await?;
     if !response.status().is_success() {
-        return Err(format!("Download failed: {}", response.status()).into());
+        return Err(anyhow!("Download failed: {}", response.status()));
     }
 
     // Temporary file to store the downloaded content
@@ -261,7 +300,7 @@ where
     struct TempFileCleanup<'a> {
         path: &'a Path,
     }
-    impl<'a> Drop for TempFileCleanup<'a> {
+    impl Drop for TempFileCleanup<'_> {
         fn drop(&mut self) {
             if self.path.exists() {
                 if let Err(e) = fs::remove_file(self.path) {
@@ -292,7 +331,7 @@ where
     let mut folder_found = false;
     for i in 0..zip.len() {
         let mut file = zip.by_index(i)?;
-        let file_name = file.enclosed_name().ok_or("Invalid file path")?;
+        let file_name = file.enclosed_name().ok_or(anyhow!("Invalid file path"))?;
 
         // Find the root directory from the ZIP file
         let segments: Vec<_> = file_name.iter().collect();
@@ -322,7 +361,7 @@ where
                 let stm32_series = &folder[..7];
                 for i in 0..zip.len() {
                     let mut file = zip.by_index(i)?;
-                    let file_name = file.enclosed_name().ok_or("Invalid file path")?;
+                    let file_name = file.enclosed_name().ok_or(anyhow!("Invalid file path"))?;
 
                     // Find the root directory from the ZIP file
                     let segments: Vec<_> = file_name.iter().collect();
@@ -348,7 +387,7 @@ where
                 // Still not found, use the default stm32 template
                 for i in 0..zip.len() {
                     let mut file = zip.by_index(i)?;
-                    let file_name = file.enclosed_name().ok_or("Invalid file path")?;
+                    let file_name = file.enclosed_name().ok_or(anyhow!("Invalid file path"))?;
 
                     // Find the root directory from the ZIP file
                     let segments: Vec<_> = file_name.iter().collect();
@@ -373,11 +412,10 @@ where
 
         // Check again
         if !folder_found {
-            return Err(format!(
+            return Err(anyhow!(
                 "The specified chip/board '{}' does not exist in the template repo",
                 folder
-            )
-            .into());
+            ));
         }
     }
 
@@ -436,7 +474,7 @@ fn copy_dir_recursive(src: &Path, dest: &Path) -> io::Result<()> {
 ///
 /// # Returns
 /// * `Result<(), String>` - 成功返回 Ok，失败返回 Err
-fn disable_rmk_default_feature(target_dir: &PathBuf) -> Result<(), String> {
+fn disable_rmk_default_feature(target_dir: &PathBuf) -> std::result::Result<(), String> {
     // 定义 Cargo.toml 的路径
     let cargo_toml_path = Path::new(target_dir).join("Cargo.toml");
 

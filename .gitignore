@@ -1,5 +1,10 @@
-/target
+**/target
 
 RMK_keyboard
 
-.DS_Store
+**/.DS_Store
+
+**/test
+!**/test/rmk.hex
+!**/test/rmk_py.uf2
+!**/test/rmk_py_id.uf2
