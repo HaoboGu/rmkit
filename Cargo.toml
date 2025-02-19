@@ -1,6 +1,6 @@
 [package]
 name = "rmkit"
-version = "0.0.10"
+version = "0.0.11"
 edition = "2021"
 homepage = "https://github.com/haobogu/rmkit"
 repository = "https://github.com/haobogu/rmkit"
@@ -13,7 +13,7 @@ clap = { version = "4.5.23", features = ["derive", "string"] }
 toml = "0.8"
 serde = "1.0"
 serde_derive = "1.0"
-reqwest = { version = "0.12", features = ["json", "gzip", "stream"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "gzip", "stream", "rustls-tls"] }
 tokio = { version = "1", features = ["full"] }
 zip = "2.2"
 futures = "0.3"
