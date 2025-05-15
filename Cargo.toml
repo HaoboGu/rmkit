@@ -21,6 +21,7 @@ futures-util = "0.3.31"
 walkdir = "2"
 inquire = "0.7.5"
 cargo_toml = "0.21"
+cargo_metadata = "0.19.2"
 
 # The profile that 'dist' will build with
 [profile.dist]
