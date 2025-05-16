@@ -15,3 +15,7 @@ targets = ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-
 install-path = "CARGO_HOME"
 # Whether to install an updater program
 install-updater = false
+# Use this until cargo dist supports ubuntu > 20.04 (https://github.com/axodotdev/cargo-dist/issues/1760#issuecomment-2769218034)
+[dist.github-custom-runners]
+global = "ubuntu-22.04"
+x86_64-unknown-linux-gnu = "ubuntu-22.04"
