@@ -120,7 +120,7 @@ fn post_process(project_info: ProjectInfo) -> Result<(), Box<dyn Error>> {
         let metadata = MetadataCommand::new()
             .current_dir(&project_info.target_dir)
             .exec()?;
-        disable_rmk_default_feature(&project_info.target_dir, &metadata, "col2row")?;
+        disable_rmk_default_features(&project_info.target_dir, &metadata, &["col2row"])?;
     }
 
     Ok(())
@@ -440,10 +440,10 @@ fn copy_dir_recursive(src: &Path, dest: &Path) -> io::Result<()> {
 ///
 /// # Returns
 /// * `Result<(), String>` - 成功返回 Ok，失败返回 Err
-fn disable_rmk_default_feature(
+fn disable_rmk_default_features(
     target_dir: &PathBuf,
     metadata: &Metadata,
-    feature: &str,
+    features: &[&str],
 ) -> Result<(), String> {
     // 定义 Cargo.toml 的路径
     let cargo_toml_path = Path::new(target_dir).join("Cargo.toml");
@@ -456,7 +456,7 @@ fn disable_rmk_default_feature(
     if let Some(cargo_toml::Dependency::Detailed(rmk_dep)) = manifest.dependencies.get_mut("rmk") {
         // 设置 default-features = false，并保留原始 version 和 features
         let mut default_features = get_dependency_default_features("rmk", metadata)?;
-        default_features.retain_mut(|s| s != feature);
+        default_features.retain(|s| !features.contains(&s.as_str()));
 
         rmk_dep.features.append(&mut default_features);
         rmk_dep.features.sort_unstable();
