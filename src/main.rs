@@ -1,3 +1,4 @@
+use cargo_metadata::{Metadata, MetadataCommand};
 use chip::get_chip_options;
 use clap::Parser;
 use futures::stream::StreamExt;
@@ -116,7 +117,10 @@ fn post_process(project_info: ProjectInfo) -> Result<(), Box<dyn Error>> {
 
     // If the keyboard is row2col, update generated Cargo.toml
     if project_info.row2col {
-        disable_rmk_default_feature(&project_info.target_dir)?;
+        let metadata = MetadataCommand::new()
+            .current_dir(&project_info.target_dir)
+            .exec()?;
+        disable_rmk_default_features(&project_info.target_dir, &metadata, &["col2row"])?;
     }
 
     Ok(())
@@ -436,7 +440,11 @@ fn copy_dir_recursive(src: &Path, dest: &Path) -> io::Result<()> {
 ///
 /// # Returns
 /// * `Result<(), String>` - 成功返回 Ok，失败返回 Err
-fn disable_rmk_default_feature(target_dir: &PathBuf) -> Result<(), String> {
+fn disable_rmk_default_features(
+    target_dir: &PathBuf,
+    metadata: &Metadata,
+    features: &[&str],
+) -> Result<(), String> {
     // 定义 Cargo.toml 的路径
     let cargo_toml_path = Path::new(target_dir).join("Cargo.toml");
 
@@ -447,7 +455,14 @@ fn disable_rmk_default_feature(target_dir: &PathBuf) -> Result<(), String> {
     // 获取 dependencies 并修改 rmk 配置
     if let Some(cargo_toml::Dependency::Detailed(rmk_dep)) = manifest.dependencies.get_mut("rmk") {
         // 设置 default-features = false，并保留原始 version 和 features
-        rmk_dep.default_features = false
+        let mut default_features = get_dependency_default_features("rmk", metadata)?;
+        default_features.retain(|s| !features.contains(&s.as_str()));
+
+        rmk_dep.features.append(&mut default_features);
+        rmk_dep.features.sort_unstable();
+        rmk_dep.features.dedup();
+
+        rmk_dep.default_features = false;
     } else {
         return Err("No valid rmk dependency found".to_string());
     }
@@ -461,4 +476,19 @@ fn disable_rmk_default_feature(target_dir: &PathBuf) -> Result<(), String> {
         .map_err(|e| format!("Failed to write updated Cargo.toml: {}", e))?;
 
     Ok(())
+}
+
+fn get_dependency_default_features(
+    dependency: &str,
+    metadata: &Metadata,
+) -> Result<Vec<String>, String> {
+    let dep = metadata
+        .packages
+        .iter()
+        .find(|p| p.name == dependency)
+        .ok_or(format!("Failed to find {} in dependencies", dependency))?;
+    dep.features
+        .get("default")
+        .cloned()
+        .ok_or(format!("Failed to get default {} features", dependency))
 }
