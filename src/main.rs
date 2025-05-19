@@ -431,30 +431,30 @@ fn copy_dir_recursive(src: &Path, dest: &Path) -> io::Result<()> {
     Ok(())
 }
 
-/// 更新指定路径下 Cargo.toml 文件中的 rmk 依赖配置
-/// 将 rmk = { version = "...", features = ["..."] } 替换为
+/// Update the rmk dependency configuration in the Cargo.toml file at the specified path
+/// Replace rmk = { version = "...", features = ["..."] } with
 /// rmk = { version = "...", default-features = false, features = ["..."] }
 ///
 /// # Arguments
-/// * `target_dir` - 包含 Cargo.toml 的目标目录路径
+/// * `target_dir` - Target directory path containing Cargo.toml
 ///
 /// # Returns
-/// * `Result<(), String>` - 成功返回 Ok，失败返回 Err
+/// * `Result<(), String>` - Returns Ok on success, Err on failure
 fn disable_rmk_default_features(
     target_dir: &PathBuf,
     metadata: &Metadata,
     features: &[&str],
 ) -> Result<(), String> {
-    // 定义 Cargo.toml 的路径
+    // Define the path to Cargo.toml
     let cargo_toml_path = Path::new(target_dir).join("Cargo.toml");
 
-    // 使用 cargo_toml 解析为 Manifest
+    // Parse as Manifest using cargo_toml
     let mut manifest =
         cargo_toml::Manifest::from_path(&cargo_toml_path).map_err(|e| e.to_string())?;
 
-    // 获取 dependencies 并修改 rmk 配置
+    // Get dependencies and modify rmk configuration
     if let Some(cargo_toml::Dependency::Detailed(rmk_dep)) = manifest.dependencies.get_mut("rmk") {
-        // 设置 default-features = false，并保留原始 version 和 features
+        // Set default-features = false, and keep the original version and features
         let mut default_features = get_dependency_default_features("rmk", metadata)?;
         default_features.retain(|s| !features.contains(&s.as_str()));
 
@@ -467,11 +467,11 @@ fn disable_rmk_default_features(
         return Err("No valid rmk dependency found".to_string());
     }
 
-    // 将修改后的 Manifest 转换为字符串
+    // Convert the modified Manifest to a string
     let updated_toml = toml::to_string(&manifest)
         .map_err(|e| format!("Failed to serialize updated Cargo.toml: {}", e))?;
 
-    // 将更新后的内容写回文件
+    // Write the updated content back to the file
     fs::write(&cargo_toml_path, updated_toml)
         .map_err(|e| format!("Failed to write updated Cargo.toml: {}", e))?;
 
