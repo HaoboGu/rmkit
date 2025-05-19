@@ -9,6 +9,7 @@ description = "rmkit is a toolkit set for RMK keyboard firmware"
 license = "Apache-2.0"
 
 [dependencies]
+rmk-config = "0.3.0"
 clap = { version = "4.5.23", features = ["derive", "string"] }
 toml = "0.8"
 serde = "1.0"

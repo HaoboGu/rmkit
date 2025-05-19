@@ -1,10 +1,11 @@
+use rmk_config::KeyboardTomlConfig;
 use std::{
     env, fs,
     path::{Path, PathBuf},
     process,
 };
 
-use crate::{chip::get_board_chip_map, config::KeyboardTomlConfig};
+use crate::chip::get_board_chip_map;
 
 /// All info needed to create a RMK project
 #[derive(Debug)]
@@ -95,8 +96,6 @@ pub(crate) fn parse_keyboard_toml(
     } else {
         chip.clone()
     };
-
-
 
     Ok(ProjectInfo {
         project_name,

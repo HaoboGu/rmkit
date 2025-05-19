@@ -230,6 +230,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "cargo_toml"
+version = "0.22.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02260d489095346e5cafd04dea8e8cb54d1d74fcd759022a9b72986ebe9a1257"
+dependencies = [
+ "serde",
+ "toml",
+]
+
+[[package]]
 name = "cc"
 version = "1.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1298,16 +1308,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "rmk-config"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ffe30a110162cda5f3e72f1ece79d06be357dc90f77697184005fc07cda9090"
+dependencies = [
+ "cargo_toml 0.22.1",
+ "serde",
+ "serde-inline-default",
+ "serde_derive",
+ "toml",
+]
+
+[[package]]
 name = "rmkit"
 version = "0.0.11"
 dependencies = [
  "cargo_metadata",
- "cargo_toml",
+ "cargo_toml 0.21.0",
  "clap",
  "futures",
  "futures-util",
  "inquire",
  "reqwest",
+ "rmk-config",
  "serde",
  "serde_derive",
  "tokio",
@@ -1414,6 +1438,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02fc4265df13d6fa1d00ecff087228cc0a2b5f3c0e87e258d8b94a156e984c70"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde-inline-default"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "59fb1bedd774187d304179493b0d3c41fbe97b04b14305363f68d2bdf5e47cb9"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
