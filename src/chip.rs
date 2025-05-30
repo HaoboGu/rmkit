@@ -10,6 +10,7 @@ pub fn get_board_chip_map() -> HashMap<&'static str, &'static str> {
     map.insert("nice!nano", "nrf52840");
     map.insert("nice!nano_v2", "nrf52840");
     map.insert("XIAO BLE", "nrf52840");
+    map.insert("Pi Pico W", "pico_w");
 
     map
 }
@@ -22,6 +23,7 @@ pub(crate) fn get_chip_options(split: bool) -> Vec<&'static str> {
         vec![
             "nrf52840",
             "rp2040",
+            "Pi Pico W",
             "nrf52833",
             "nrf52832",
             "nrf52811",
@@ -29,6 +31,12 @@ pub(crate) fn get_chip_options(split: bool) -> Vec<&'static str> {
             "esp32c3",
             "esp32s3",
             "esp32c6",
+            "nice!nano_v2",
+            "XIAO BLE",
+            "nice!nano",
+            "nrfmicro",
+            "bluemicro840",
+            "puchi_ble",
             "stm32h730vb",
             "stm32g473qc",
             "stm32g0c1ve",

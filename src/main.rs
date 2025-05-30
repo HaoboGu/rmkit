@@ -1,5 +1,5 @@
 use cargo_metadata::{Metadata, MetadataCommand};
-use chip::get_chip_options;
+use chip::{get_board_chip_map, get_chip_options};
 use clap::Parser;
 use futures::stream::StreamExt;
 use inquire::ui::{Attributes, Color, RenderConfig, StyleSheet, Styled};
@@ -146,7 +146,7 @@ fn replace_in_folder(
 async fn download_project_template(project_info: &ProjectInfo) -> Result<(), Box<dyn Error>> {
     let user = "HaoboGu";
     let repo = "rmk-template";
-    let branch = "feat/rework";
+    let branch = "main";
     let url = format!(
         "https://github.com/{}/{}/archive/refs/heads/{}.zip",
         user, repo, branch
@@ -172,8 +172,8 @@ async fn init_project(
     } else {
         split.unwrap()
     };
-    let chip = if chip.is_none() {
-        Select::new("Choose your microcontroller", get_chip_options(split))
+    let mut chip_or_board = if chip.is_none() {
+        Select::new("Choose your microcontroller or board", get_chip_options(split))
             .prompt()?
             .to_string()
     } else {
@@ -185,23 +185,32 @@ async fn init_project(
     let target_dir = PathBuf::from(&project_name);
     fs::create_dir_all(&target_dir)?;
 
+    // Convert board to chip first
+    let board_chip_map = get_board_chip_map();
+    if let Some(c) = board_chip_map.get(chip_or_board.as_str()) {
+        chip_or_board = c.to_string();
+    };
     let remote_folder = if split {
-        format!("{}_{}", chip, "split")
+        format!("{}_{}", chip_or_board, "split")
     } else {
-        chip.clone()
+        chip_or_board.clone()
     };
 
-    let uf2_key = if chip.starts_with("stm32") {
-        chip[..7].to_string()
+    let uf2_key = if chip_or_board.starts_with("stm32") {
+        chip_or_board[..7].to_string()
     } else {
-        chip.clone()
+        if chip_or_board == "pico_w" {
+            "rp2040".to_string()
+        } else {
+            chip_or_board.clone()
+        }
     };
 
     let project_info = ProjectInfo {
         project_name,
         target_dir,
         remote_folder,
-        chip,
+        chip: chip_or_board,
         uf2_key,
         row2col,
     };
@@ -483,7 +492,7 @@ fn get_dependency_default_features(
     let dep = metadata
         .packages
         .iter()
-        .find(|p| p.name == dependency)
+        .find(|p| p.name.to_string() == dependency)
         .ok_or(format!("Failed to find {} in dependencies", dependency))?;
     dep.features
         .get("default")

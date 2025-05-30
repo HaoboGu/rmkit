@@ -16,13 +16,13 @@ serde = "1.0"
 serde_derive = "1.0"
 reqwest = { version = "0.12", default-features = false, features = ["json", "gzip", "stream", "rustls-tls"] }
 tokio = { version = "1", features = ["full"] }
-zip = "2.2"
+zip = "4"
 futures = "0.3"
 futures-util = "0.3.31"
 walkdir = "2"
 inquire = "0.7.5"
-cargo_toml = "0.21"
-cargo_metadata = "0.19.2"
+cargo_toml = "0.22"
+cargo_metadata = "0.20"
 
 # The profile that 'dist' will build with
 [profile.dist]
