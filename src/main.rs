@@ -113,12 +113,12 @@ fn post_process(project_info: ProjectInfo) -> Result<(), Box<dyn Error>> {
         &project_info.uf2_key,
     )?;
 
-    // If the keyboard is row2col, update generated Cargo.toml
-    if project_info.row2col {
+    // Disable some default features
+    if project_info.disabled_default_feature.len() > 0 {
         let metadata = MetadataCommand::new()
-            .current_dir(&project_info.target_dir)
-            .exec()?;
-        disable_rmk_default_features(&project_info.target_dir, &metadata, &["col2row"])?;
+        .current_dir(&project_info.target_dir)
+        .exec()?;
+        disable_rmk_default_features(&project_info.target_dir, &metadata, project_info.disabled_default_feature)?;
     }
 
     Ok(())
@@ -179,7 +179,11 @@ async fn init_project(
     } else {
         chip.unwrap()
     };
+    let mut default_feature_config = vec![];
     let row2col = row2col.unwrap_or(false);
+    if row2col {
+        default_feature_config.push("col2row".to_string());
+    }
 
     // Get project info from parameters
     let target_dir = PathBuf::from(&project_name);
@@ -212,7 +216,7 @@ async fn init_project(
         remote_folder,
         chip: chip_or_board,
         uf2_key,
-        row2col,
+        disabled_default_feature: default_feature_config,
     };
 
     // Download template
@@ -450,8 +454,9 @@ fn copy_dir_recursive(src: &Path, dest: &Path) -> io::Result<()> {
 fn disable_rmk_default_features(
     target_dir: &PathBuf,
     metadata: &Metadata,
-    features: &[&str],
+    features: Vec<String>,
 ) -> Result<(), String> {
+    println!("Disabling default features: {:?}", features);
     // Define the path to Cargo.toml
     let cargo_toml_path = Path::new(target_dir).join("Cargo.toml");
 
@@ -463,7 +468,7 @@ fn disable_rmk_default_features(
     if let Some(cargo_toml::Dependency::Detailed(rmk_dep)) = manifest.dependencies.get_mut("rmk") {
         // Set default-features = false, and keep the original version and features
         let mut default_features = get_dependency_default_features("rmk", metadata)?;
-        default_features.retain(|s| !features.contains(&s.as_str()));
+        default_features.retain(|s| !features.contains(s));
 
         rmk_dep.features.append(&mut default_features);
         rmk_dep.features.sort_unstable();
