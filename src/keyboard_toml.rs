@@ -1,4 +1,4 @@
-use rmk_config::KeyboardTomlConfig;
+use rmk_config::{BoardConfig, KeyboardTomlConfig};
 use std::{env, fs, path::PathBuf, process};
 
 /// All info needed to create a RMK project
@@ -25,12 +25,7 @@ pub(crate) fn parse_keyboard_toml(
 ) -> Result<ProjectInfo, Box<dyn std::error::Error>> {
     let keyboard_toml_config = KeyboardTomlConfig::new_from_toml_str(keyboard_toml);
 
-    let project_name = keyboard_toml_config
-        .keyboard
-        .clone()
-        .expect("[keyboard] section is required")
-        .name
-        .replace(" ", "_");
+    let project_name = keyboard_toml_config.get_basic_info().name.replace(" ", "_");
     let target_dir = if target_dir.is_none() {
         project_name.clone()
     } else {
@@ -46,16 +41,13 @@ pub(crate) fn parse_keyboard_toml(
     let mut default_feature_config = vec![];
 
     // Check keyboard.toml
-    let row2col = if let Some(m) = keyboard_toml_config.clone().matrix {
-        m.row2col
-    } else {
-        if let Some(s) = keyboard_toml_config.clone().split {
-            s.central.matrix.row2col
-        } else {
-            false
-        }
-    };
-    if row2col {
+    if match keyboard_toml_config
+        .get_board_config()
+        .expect("No matrix config found")
+    {
+        BoardConfig::Split(split_config) => split_config.central.matrix.row2col,
+        BoardConfig::UniBody(uni_body_config) => uni_body_config.matrix.row2col,
+    } {
         default_feature_config.push("col2row".to_string());
     }
 

@@ -1,6 +1,6 @@
 [package]
 name = "rmkit"
-version = "0.0.14"
+version = "0.0.15"
 edition = "2021"
 homepage = "https://github.com/haobogu/rmkit"
 repository = "https://github.com/haobogu/rmkit"
@@ -9,7 +9,7 @@ description = "rmkit is a toolkit set for RMK keyboard firmware"
 license = "Apache-2.0"
 
 [dependencies]
-rmk-config = { version = "0.4.0" }
+rmk-config = { version = "0.5" }
 clap = { version = "4.5.23", features = ["derive", "string"] }
 toml = "0.8"
 serde = "1.0"
