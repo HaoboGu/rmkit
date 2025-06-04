@@ -1560,8 +1560,9 @@ dependencies = [
 
 [[package]]
 name = "rmk-config"
-version = "0.3.0"
-source = "git+https://github.com/haobogu/rmk#0a668da25f9b2d4c8d521f97a8816ddb598570a7"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7cbd9563f79e04be3ff3b2a9f1159e7615a4ca57d90da27913b6890c622345d9"
 dependencies = [
  "cargo_toml",
  "config",
