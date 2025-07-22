@@ -23,7 +23,7 @@ pub(crate) fn parse_keyboard_toml(
     keyboard_toml: &String,
     target_dir: Option<String>,
 ) -> Result<ProjectInfo, Box<dyn std::error::Error>> {
-    let keyboard_toml_config = KeyboardTomlConfig::new_from_toml_str(keyboard_toml);
+    let keyboard_toml_config = KeyboardTomlConfig::new_from_toml_path(keyboard_toml);
 
     let project_name = keyboard_toml_config.get_basic_info().name.replace(" ", "_");
     let target_dir = if target_dir.is_none() {
