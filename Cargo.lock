@@ -1581,7 +1581,7 @@ dependencies = [
 
 [[package]]
 name = "rmkit"
-version = "0.0.15"
+version = "0.0.16"
 dependencies = [
  "cargo_metadata",
  "cargo_toml",
