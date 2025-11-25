@@ -32,8 +32,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             chip,
             split,
             local_path,
-            row2col,
-        } => init_project(project_name, chip, split, local_path, row2col).await,
+        } => init_project(project_name, chip, split, local_path).await,
         args::Commands::GetChip { keyboard_toml_path } => {
             let project_info = parse_keyboard_toml(&keyboard_toml_path, None)?;
             println!("{}", project_info.chip);
@@ -121,6 +120,11 @@ fn post_process(project_info: ProjectInfo) -> Result<(), Box<dyn Error>> {
         disable_rmk_default_features(&project_info.target_dir, &metadata, project_info.disabled_default_feature)?;
     }
 
+    // Enable non-default features
+    if project_info.enabled_feature.len() > 0 {
+        enable_rmk_features(&project_info.target_dir, project_info.enabled_feature)?;
+    }
+
     Ok(())
 }
 
@@ -160,7 +164,6 @@ async fn init_project(
     chip: Option<String>,
     split: Option<bool>,
     local_path: Option<String>,
-    row2col: Option<bool>,
 ) -> Result<(), Box<dyn Error>> {
     let project_name = if project_name.is_none() {
         Text::new("Project Name:").prompt()?.replace(" ", "_")
@@ -179,11 +182,6 @@ async fn init_project(
     } else {
         chip.unwrap()
     };
-    let mut default_feature_config = vec![];
-    let row2col = row2col.unwrap_or(false);
-    if row2col {
-        default_feature_config.push("col2row".to_string());
-    }
 
     // Get project info from parameters
     let target_dir = PathBuf::from(&project_name);
@@ -216,7 +214,8 @@ async fn init_project(
         remote_folder,
         chip: chip_or_board,
         uf2_key,
-        disabled_default_feature: default_feature_config,
+        disabled_default_feature: Vec::new(),
+        enabled_feature: Vec::new(),
     };
 
     // Download template
@@ -503,4 +502,51 @@ fn get_dependency_default_features(
         .get("default")
         .cloned()
         .ok_or(format!("Failed to get default {} features", dependency))
+}
+
+/// Enable non-default features for rmk dependency in Cargo.toml
+///
+/// This function adds features to the rmk dependency's feature list
+///
+/// # Arguments
+/// * `target_dir` - Target directory path containing Cargo.toml
+/// * `features` - List of features to enable
+///
+/// # Returns
+/// * `Result<(), String>` - Returns Ok on success, Err on failure
+fn enable_rmk_features(
+    target_dir: &PathBuf,
+    features: Vec<String>,
+) -> Result<(), String> {
+    println!("Enabling features: {:?}", features);
+    // Define the path to Cargo.toml
+    let cargo_toml_path = Path::new(target_dir).join("Cargo.toml");
+
+    // Parse as Manifest using cargo_toml
+    let mut manifest =
+        cargo_toml::Manifest::from_path(&cargo_toml_path).map_err(|e| e.to_string())?;
+
+    // Get dependencies and modify rmk configuration
+    if let Some(cargo_toml::Dependency::Detailed(rmk_dep)) = manifest.dependencies.get_mut("rmk") {
+        // Add features to the existing feature list
+        for feature in features {
+            if !rmk_dep.features.contains(&feature) {
+                rmk_dep.features.push(feature);
+            }
+        }
+        rmk_dep.features.sort_unstable();
+        rmk_dep.features.dedup();
+    } else {
+        return Err("No valid rmk dependency found".to_string());
+    }
+
+    // Convert the modified Manifest to a string
+    let updated_toml = toml::to_string(&manifest)
+        .map_err(|e| format!("Failed to serialize updated Cargo.toml: {}", e))?;
+
+    // Write the updated content back to the file
+    fs::write(&cargo_toml_path, updated_toml)
+        .map_err(|e| format!("Failed to write updated Cargo.toml: {}", e))?;
+
+    Ok(())
 }
