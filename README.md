@@ -39,4 +39,4 @@ Now rmkit can be used to generate RMK project directly from `keyboard.toml` and 
     rmkit init
     ```
 
-    The available project template can be found at [rmk-template](https://github.com/HaoboGu/rmk-template/tree/feat/rework)
+    The available project template can be found at [rmk-template](https://github.com/HaoboGu/rmk-template)
