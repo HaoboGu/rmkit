@@ -1,4 +1,4 @@
-use rmk_config::{BoardConfig, KeyboardTomlConfig};
+use rmk_config::KeyboardTomlConfig;
 use std::{env, fs, path::PathBuf, process};
 
 /// All info needed to create a RMK project
@@ -16,6 +16,8 @@ pub(crate) struct ProjectInfo {
     pub(crate) uf2_key: String,
     /// List of disabled default features
     pub(crate) disabled_default_feature: Vec<String>,
+    /// List of enabled non-default features
+    pub(crate) enabled_feature: Vec<String>,
 }
 
 /// Parse `keyboard.toml`, get all needed project info for creating a new RMK project
@@ -25,7 +27,7 @@ pub(crate) fn parse_keyboard_toml(
 ) -> Result<ProjectInfo, Box<dyn std::error::Error>> {
     let keyboard_toml_config = KeyboardTomlConfig::new_from_toml_path(keyboard_toml);
 
-    let project_name = keyboard_toml_config.get_basic_info().name.replace(" ", "_");
+    let project_name = keyboard_toml_config.get_device_config().name.replace(" ", "_");
     let target_dir = if target_dir.is_none() {
         project_name.clone()
     } else {
@@ -38,29 +40,35 @@ pub(crate) fn parse_keyboard_toml(
         process::exit(1);
     }
 
-    let mut default_feature_config = vec![];
+    let mut disabled_default_feature = vec![];
+    let mut enabled_feature = vec![];
 
     // Check keyboard.toml
-    if match keyboard_toml_config
-        .get_board_config()
-        .expect("No matrix config found")
-    {
-        BoardConfig::Split(split_config) => split_config.central.matrix.row2col,
-        BoardConfig::UniBody(uni_body_config) => uni_body_config.matrix.row2col,
-    } {
-        default_feature_config.push("col2row".to_string());
-    }
 
     // Storage config
     let storage_config = keyboard_toml_config.get_storage_config();
     if !storage_config.enabled {
-        default_feature_config.push("storage".to_string());
+        disabled_default_feature.push("storage".to_string());
     }
 
     // Defmt config
     let dep_config = keyboard_toml_config.get_dependency_config();
     if !dep_config.defmt_log {
-        default_feature_config.push("defmt".to_string());
+        disabled_default_feature.push("defmt".to_string());
+    }
+
+    if !keyboard_toml_config.get_host_config().vial_enabled {
+        disabled_default_feature.push("vial".to_string());
+        disabled_default_feature.push("vial_lock".to_string());
+    }
+
+    // Light config requires controller feature if any light pin is configured
+    let light_config = keyboard_toml_config.get_light_config();
+    if light_config.capslock.is_some()
+        || light_config.scrolllock.is_some()
+        || light_config.numslock.is_some()
+    {
+        enabled_feature.push("controller".to_string());
     }
 
     let board_config = keyboard_toml_config.get_board_config().unwrap();
@@ -93,6 +101,7 @@ pub(crate) fn parse_keyboard_toml(
         remote_folder: folder,
         chip: chip_or_board,
         uf2_key,
-        disabled_default_feature: default_feature_config,
+        disabled_default_feature,
+        enabled_feature,
     })
 }
