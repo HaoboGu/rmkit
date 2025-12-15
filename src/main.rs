@@ -27,7 +27,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             keyboard_toml_path,
             vial_json_path,
             target_dir,
-        } => create_project(keyboard_toml_path, vial_json_path, target_dir).await,
+            version,
+        } => create_project(keyboard_toml_path, vial_json_path, target_dir, version).await,
         args::Commands::Init {
             project_name,
             chip,
@@ -52,27 +53,31 @@ async fn create_project(
     keyboard_toml_path: Option<String>,
     vial_json_path: Option<String>,
     target_dir: Option<String>,
+    version: Option<String>,
 ) -> Result<(), Box<dyn Error>> {
+    // Resolve version first for fast fail
+    let commit_or_branch = version::resolve_template_version(version.as_deref()).await?;
+
     // Inquire paths interactively is no argument is specified
-    let keyboard_toml_path = if keyboard_toml_path.is_none() {
+    let keyboard_toml_path = if let Some(path) = keyboard_toml_path {
+        path
+    } else {
         Text::new("Path to keyboard.toml:")
             .with_default("./keyboard.toml")
             .prompt()?
-    } else {
-        keyboard_toml_path.unwrap()
     };
-    let vial_json_path = if vial_json_path.is_none() {
-        Text::new("Path to vial.json")
-            .with_default(&"./vial.json")
-            .prompt()?
+    let vial_json_path = if let Some(path) = vial_json_path {
+        path
     } else {
-        vial_json_path.unwrap()
+        Text::new("Path to vial.json")
+            .with_default("./vial.json")
+            .prompt()?
     };
     // Parse keyboard.toml to get project info
     let project_info = parse_keyboard_toml(&keyboard_toml_path, target_dir)?;
 
     // Download corresponding project template
-    download_project_template(&project_info, None).await?;
+    download_project_template(&project_info, &commit_or_branch).await?;
 
     // Copy keyboard.toml and vial.json to project_dir
     fs::copy(
@@ -115,7 +120,7 @@ fn post_process(project_info: ProjectInfo) -> Result<(), Box<dyn Error>> {
     )?;
 
     // Disable some default features
-    if project_info.disabled_default_feature.len() > 0 {
+    if !project_info.disabled_default_feature.is_empty() {
         let metadata = MetadataCommand::new()
             .current_dir(&project_info.target_dir)
             .exec()?;
@@ -127,7 +132,7 @@ fn post_process(project_info: ProjectInfo) -> Result<(), Box<dyn Error>> {
     }
 
     // Enable non-default features
-    if project_info.enabled_feature.len() > 0 {
+    if !project_info.enabled_feature.is_empty() {
         enable_rmk_features(&project_info.target_dir, project_info.enabled_feature)?;
     }
 
@@ -143,7 +148,7 @@ fn replace_in_folder(
     let walker = walkdir::WalkDir::new(&project_info.target_dir)
         .into_iter()
         .filter_map(|e| e.ok())
-        .filter(|e| e.path().extension().map_or(false, |e| e == ext));
+        .filter(|e| e.path().extension().is_some_and(|e| e == ext));
     for entry in walker {
         let path = entry.path();
         let content = fs::read_to_string(path)?;
@@ -155,16 +160,13 @@ fn replace_in_folder(
 
 async fn download_project_template(
     project_info: &ProjectInfo,
-    version: Option<&str>,
+    commit_or_branch: &str,
 ) -> Result<(), Box<dyn Error>> {
     let user = "HaoboGu";
     let repo = "rmk-template";
 
-    // Resolve version to git reference
-    let git_ref = version::resolve_template_version(version).await;
-
     // Build download URL
-    let url = version::build_github_archive_url(user, repo, &git_ref);
+    let url = version::build_github_archive_url(user, repo, commit_or_branch);
 
     download_with_progress(&url, &project_info.target_dir, &project_info.remote_folder).await
 }
@@ -177,25 +179,32 @@ async fn init_project(
     local_path: Option<String>,
     version: Option<String>,
 ) -> Result<(), Box<dyn Error>> {
-    let project_name = if project_name.is_none() {
+    // Resolve version first for fast fail (only when using remote template)
+    let commit_or_branch = if local_path.is_none() {
+        Some(version::resolve_template_version(version.as_deref()).await?)
+    } else {
+        None
+    };
+
+    let project_name = if let Some(name) = project_name {
+        name.replace(" ", "_")
+    } else {
         Text::new("Project Name:").prompt()?.replace(" ", "_")
-    } else {
-        project_name.unwrap().replace(" ", "_")
     };
-    let split = if split.is_none() {
+    let split = if let Some(s) = split {
+        s
+    } else {
         Select::new("Choose your keyboard type?", vec!["normal", "split"]).prompt()? == "split"
-    } else {
-        split.unwrap()
     };
-    let mut chip_or_board = if chip.is_none() {
+    let mut chip_or_board = if let Some(c) = chip {
+        c
+    } else {
         Select::new(
             "Choose your microcontroller or board",
             get_chip_options(split),
         )
         .prompt()?
         .to_string()
-    } else {
-        chip.unwrap()
     };
 
     // Get project info from parameters
@@ -215,12 +224,10 @@ async fn init_project(
 
     let uf2_key = if chip_or_board.starts_with("stm32") {
         chip_or_board[..7].to_string()
+    } else if chip_or_board == "pico_w" {
+        "rp2040".to_string()
     } else {
-        if chip_or_board == "pico_w" {
-            "rp2040".to_string()
-        } else {
-            chip_or_board.clone()
-        }
+        chip_or_board.clone()
     };
 
     let project_info = ProjectInfo {
@@ -241,7 +248,13 @@ async fn init_project(
         }
         None => {
             // Use remote template
-            download_project_template(&project_info, version.as_deref()).await?;
+            download_project_template(
+                &project_info,
+                commit_or_branch
+                    .as_ref()
+                    .expect("commit_or_branch should be resolved for remote template"),
+            )
+            .await?;
         }
     }
 
@@ -265,6 +278,7 @@ async fn download_with_progress<P>(
 where
     P: AsRef<Path>,
 {
+    println!("download url: {}", download_url);
     let output_path = output_path.as_ref();
 
     // Ensure the output path is clean

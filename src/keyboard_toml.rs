@@ -31,10 +31,10 @@ pub(crate) fn parse_keyboard_toml(
         .get_device_config()
         .name
         .replace(" ", "_");
-    let target_dir = if target_dir.is_none() {
-        project_name.clone()
+    let target_dir = if let Some(dir) = target_dir {
+        dir
     } else {
-        target_dir.unwrap()
+        project_name.clone()
     };
     let project_dir = env::current_dir()?.join(&target_dir);
 

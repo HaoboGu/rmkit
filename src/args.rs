@@ -22,6 +22,10 @@ pub enum Commands {
         /// Target dir
         #[arg(long)]
         target_dir: Option<String>,
+
+        /// (Optional) RMK version
+        #[arg(long)]
+        version: Option<String>,
     },
 
     /// Initialize a new RMK project with basic configuration
@@ -42,7 +46,7 @@ pub enum Commands {
         #[arg(long)]
         local_path: Option<String>,
 
-        /// (Optional) RMK template version
+        /// (Optional) RMK version
         #[arg(long)]
         version: Option<String>,
     },
