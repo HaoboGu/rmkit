@@ -11,6 +11,9 @@ pub fn get_board_chip_map() -> HashMap<&'static str, &'static str> {
     map.insert("nice!nano_v2", "nrf52840");
     map.insert("XIAO BLE", "nrf52840");
     map.insert("Pi Pico W", "pico_w");
+    map.insert("Pico W", "pico_w");
+    map.insert("pi_pico_w", "pico_w");
+    map.insert("pico_w", "pico_w");
 
     map
 }
