@@ -41,6 +41,10 @@ pub enum Commands {
         /// (Optional) Local project template path
         #[arg(long)]
         local_path: Option<String>,
+
+        /// (Optional) RMK template version
+        #[arg(long)]
+        version: Option<String>,
     },
     /// Get chip name from keyboard.toml
     GetChip {
@@ -53,5 +57,5 @@ pub enum Commands {
         /// Path to keyboard.toml file
         #[arg(long)]
         keyboard_toml_path: String,
-    }
+    },
 }

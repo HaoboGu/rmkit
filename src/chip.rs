@@ -18,7 +18,14 @@ pub fn get_board_chip_map() -> HashMap<&'static str, &'static str> {
 /// All supported chips
 pub(crate) fn get_chip_options(split: bool) -> Vec<&'static str> {
     if split {
-        vec!["rp2040", "nrf52840", "Pi Pico W", "esp32c3", "esp32c6", "esp32s3"]
+        vec![
+            "rp2040",
+            "nrf52840",
+            "Pi Pico W",
+            "esp32c3",
+            "esp32c6",
+            "esp32s3",
+        ]
     } else {
         vec![
             "nrf52840",

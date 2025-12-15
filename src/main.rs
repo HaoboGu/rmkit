@@ -16,6 +16,7 @@ use zip::ZipArchive;
 mod args;
 mod chip;
 mod keyboard_toml;
+mod version;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -32,7 +33,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             chip,
             split,
             local_path,
-        } => init_project(project_name, chip, split, local_path).await,
+            version,
+        } => init_project(project_name, chip, split, local_path, version).await,
         args::Commands::GetChip { keyboard_toml_path } => {
             let project_info = parse_keyboard_toml(&keyboard_toml_path, None)?;
             println!("{}", project_info.chip);
@@ -70,7 +72,7 @@ async fn create_project(
     let project_info = parse_keyboard_toml(&keyboard_toml_path, target_dir)?;
 
     // Download corresponding project template
-    download_project_template(&project_info).await?;
+    download_project_template(&project_info, None).await?;
 
     // Copy keyboard.toml and vial.json to project_dir
     fs::copy(
@@ -115,9 +117,13 @@ fn post_process(project_info: ProjectInfo) -> Result<(), Box<dyn Error>> {
     // Disable some default features
     if project_info.disabled_default_feature.len() > 0 {
         let metadata = MetadataCommand::new()
-        .current_dir(&project_info.target_dir)
-        .exec()?;
-        disable_rmk_default_features(&project_info.target_dir, &metadata, project_info.disabled_default_feature)?;
+            .current_dir(&project_info.target_dir)
+            .exec()?;
+        disable_rmk_default_features(
+            &project_info.target_dir,
+            &metadata,
+            project_info.disabled_default_feature,
+        )?;
     }
 
     // Enable non-default features
@@ -147,14 +153,19 @@ fn replace_in_folder(
     Ok(())
 }
 
-async fn download_project_template(project_info: &ProjectInfo) -> Result<(), Box<dyn Error>> {
+async fn download_project_template(
+    project_info: &ProjectInfo,
+    version: Option<&str>,
+) -> Result<(), Box<dyn Error>> {
     let user = "HaoboGu";
     let repo = "rmk-template";
-    let branch = "main";
-    let url = format!(
-        "https://github.com/{}/{}/archive/refs/heads/{}.zip",
-        user, repo, branch
-    );
+
+    // Resolve version to git reference
+    let git_ref = version::resolve_template_version(version).await;
+
+    // Build download URL
+    let url = version::build_github_archive_url(user, repo, &git_ref);
+
     download_with_progress(&url, &project_info.target_dir, &project_info.remote_folder).await
 }
 
@@ -164,6 +175,7 @@ async fn init_project(
     chip: Option<String>,
     split: Option<bool>,
     local_path: Option<String>,
+    version: Option<String>,
 ) -> Result<(), Box<dyn Error>> {
     let project_name = if project_name.is_none() {
         Text::new("Project Name:").prompt()?.replace(" ", "_")
@@ -176,9 +188,12 @@ async fn init_project(
         split.unwrap()
     };
     let mut chip_or_board = if chip.is_none() {
-        Select::new("Choose your microcontroller or board", get_chip_options(split))
-            .prompt()?
-            .to_string()
+        Select::new(
+            "Choose your microcontroller or board",
+            get_chip_options(split),
+        )
+        .prompt()?
+        .to_string()
     } else {
         chip.unwrap()
     };
@@ -225,8 +240,8 @@ async fn init_project(
             copy_dir_recursive(Path::new(&p), &project_info.target_dir)?;
         }
         None => {
-            // Use remote tempate
-            download_project_template(&project_info).await?;
+            // Use remote template
+            download_project_template(&project_info, version.as_deref()).await?;
         }
     }
 
@@ -514,10 +529,7 @@ fn get_dependency_default_features(
 ///
 /// # Returns
 /// * `Result<(), String>` - Returns Ok on success, Err on failure
-fn enable_rmk_features(
-    target_dir: &PathBuf,
-    features: Vec<String>,
-) -> Result<(), String> {
+fn enable_rmk_features(target_dir: &PathBuf, features: Vec<String>) -> Result<(), String> {
     println!("Enabling features: {:?}", features);
     // Define the path to Cargo.toml
     let cargo_toml_path = Path::new(target_dir).join("Cargo.toml");
