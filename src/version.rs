@@ -20,6 +20,10 @@ struct VersionMapping {
 pub async fn resolve_template_version(version: Option<&str>) -> Result<String, Box<dyn Error>> {
     match version {
         Some(v) => {
+            if v == "latest" || v == "main" {
+                return Ok("main".to_string())
+            }
+
             // User provided a version, validate it
             let mapping = fetch_all_versions().await?;
 
@@ -32,6 +36,7 @@ pub async fn resolve_template_version(version: Option<&str>) -> Result<String, B
                     // Version not found, show available versions
                     let mut versions: Vec<String> = mapping.versions.keys().cloned().collect();
                     versions.sort();
+                    versions.push("main".to_string());
                     Err(format!(
                         "Invalid version '{}'. Available versions: {}",
                         v,
