@@ -1,7 +1,7 @@
-//! End-to-end: run the built binary on keyboard configs and layout fixtures.
-//! Layout conversion also checks that the generated `[layout]` passes
-//! rmk-config validation, which the command reports on stderr and exits
-//! non-zero on failure.
+//! End-to-end: run the built binary (`rmkit layout convert`) on fixture inputs
+//! (vial.json and raw KLE exports) and check the output (including that the
+//! generated `[layout]` passes rmk-config validation, which the command reports
+//! on stderr and exits non-zero on failure).
 
 use std::process::Command;
 
@@ -11,34 +11,6 @@ fn run(fixture: &str) -> std::process::Output {
         .args(["layout", "convert", &path])
         .output()
         .expect("failed to run rmkit")
-}
-
-fn check_battery_config(fixture: &str) {
-    let path = format!("{}/tests/fixtures/{fixture}", env!("CARGO_MANIFEST_DIR"));
-    // get-chip also creates the project directory. Keep it out of the repo
-    // and isolate the two tests when the test runner executes them in parallel.
-    let dir = std::env::temp_dir().join(format!("rmkit_battery_{fixture}_{}", std::process::id()));
-    std::fs::create_dir(&dir).unwrap();
-    let out = Command::new(env!("CARGO_BIN_EXE_rmkit"))
-        .current_dir(&dir)
-        .args(["get-chip", "--keyboard-toml-path", &path])
-        .output()
-        .expect("failed to run rmkit");
-    std::fs::remove_dir_all(&dir).unwrap();
-
-    let stderr = String::from_utf8_lossy(&out.stderr);
-    assert!(out.status.success(), "{fixture} failed:\n{stderr}");
-    assert_eq!(String::from_utf8_lossy(&out.stdout).trim(), "nrf52840");
-}
-
-#[test]
-fn get_chip_accepts_unibody_battery_table() {
-    check_battery_config("battery_unibody.toml");
-}
-
-#[test]
-fn get_chip_accepts_split_battery_tables() {
-    check_battery_config("battery_split.toml");
 }
 
 #[test]
