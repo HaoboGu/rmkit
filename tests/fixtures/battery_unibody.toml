@@ -1,0 +1,27 @@
+# Minimal regression for RMK's use_config/nrf52840_ble example (issue #19).
+[keyboard]
+name = "Battery Unibody"
+vendor_id = 0x4c4b
+product_id = 0x4643
+chip = "nrf52840"
+
+[matrix]
+row_pins = ["P1_00"]
+col_pins = ["P1_05"]
+
+[layout]
+rows = 1
+cols = 1
+map = "(0,0)"
+
+[keymap]
+layers = 1
+
+[[keymap.layer]]
+keys = "A"
+
+[ble]
+enabled = true
+
+[battery]
+battery_adc_pin = "vddh"
